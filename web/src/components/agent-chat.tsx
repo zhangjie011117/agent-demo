@@ -4,8 +4,9 @@
  * AgentChat组件
  * AG-UI对话组件，负责显示消息和处理用户输入
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAgentRun, useAgentChat } from '@/hooks/use-agent-run';
+import { useThreadHistory } from '@/hooks/use-thread-history';
 
 interface AgentChatProps {
   agentId: string;
@@ -31,6 +32,39 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
   } = useAgentChat();
 
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Auto-scroll ref and function
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  const {
+    chats: historyChats,
+    loadMore,
+    hasMore,
+    isLoading: isLoadingHistory,
+  } = useThreadHistory(threadId, userId);
+
+  // 将 history chats 转为扁平消息列表
+  const historyMessages = historyChats.flatMap((chat) =>
+    chat.messages.map((msg) => ({
+      id: msg.id,
+      role: msg.role as 'user' | 'assistant' | 'system' | 'tool',
+      content: typeof msg.content === 'string' ? msg.content : msg.content?.text || '',
+    }))
+  );
+
+  // 合并历史消息和当前消息
+  const allMessages = [...historyMessages, ...messages];
+
+  // Auto-scroll to bottom when new messages arrive or history loads
+  useEffect(() => {
+    if (!isLoadingHistory) {
+      scrollToBottom();
+    }
+  }, [historyChats, isLoadingHistory, scrollToBottom]);
 
   // SSE事件处理
   const handleSSEEvent = useCallback((event: any) => {
@@ -124,6 +158,17 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     }
   }, [setMessages]);
 
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLDivElement;
+      // 滚动到顶部时加载更多
+      if (target.scrollTop === 0 && hasMore && !isLoadingHistory) {
+        loadMore();
+      }
+    },
+    [hasMore, isLoadingHistory, loadMore]
+  );
+
   const { runAgent } = useAgentRun({
     agentId,
     threadId,
@@ -150,7 +195,7 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     // 调用Agent，包含当前用户输入
     await runAgent({
       messages: [
-        ...messages.map((m) => ({
+        ...allMessages.map((m) => ({
           id: m.id,
           role: m.role,
           content: m.content,
@@ -184,7 +229,13 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
         flex: 1,
         overflow: 'auto',
         padding: '1rem',
-      }}>
+      }} onScroll={handleScroll}>
+        {isLoadingHistory && (
+          <div style={{ textAlign: 'center', padding: '0.5rem', color: '#999' }}>
+            加载更多...
+          </div>
+        )}
+
         {messages.length === 0 && (
           <div style={{
             textAlign: 'center',
@@ -195,7 +246,7 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
           </div>
         )}
 
-        {messages.map((msg, index) => (
+        {allMessages.map((msg, index) => (
           <div
             key={msg.id || index}
             style={{
@@ -242,6 +293,8 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
             </div>
           </div>
         )}
+
+        <div ref={messagesEndRef} />
       </div>
 
       {/* 输入框 */}

@@ -105,10 +105,10 @@ export class AgentService {
           orderBy: { created_at: 'asc' },
         });
         if (firstMessage) {
-          whereCondition.created_at = { gt: cursorChat.created_at };
+          whereCondition.created_at = { lt: cursorChat.created_at };
         }
       } else {
-        whereCondition.created_at = { gt: cursorChat.created_at };
+        whereCondition.created_at = { lt: cursorChat.created_at };
       }
     }
 

@@ -52,7 +52,7 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     chat.messages.map((msg) => ({
       id: msg.id,
       role: msg.role as 'user' | 'assistant' | 'system' | 'tool',
-      content: typeof msg.content === 'string' ? msg.content : msg.content?.text || '',
+      content: typeof msg.content === 'string' ? msg.content : (msg.content as any)?.text || '',
     }))
   );
 

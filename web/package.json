@@ -1,26 +1,28 @@
 {
   "name": "agent-web",
   "version": "1.0.0",
-  "description": "Agent Web UI - Next.js + AG-UI",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck"
   },
   "dependencies": {
     "@ag-ui/client": "^0.0.53",
     "@ag-ui/core": "^0.0.53",
-    "@ant-design/icons-vue": "^7.0.1",
-    "ant-design-vue": "^4.2.6",
-    "antd": "^6.4.2",
-    "next": "^14.2.35",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@nuxt/ui": "^4.7.1",
+    "@tailwindcss/vite": "^4.3.0",
+    "nuxt": "^4.4.5",
+    "vue": "^3.5.0"
   },
   "devDependencies": {
-    "@types/node": "^25.8.0",
-    "@types/react": "^19.2.14",
-    "typescript": "^6.0.3"
+    "@nuxt/devtools": "latest",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vue-tsc": "^2.1.0"
   }
 }

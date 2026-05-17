@@ -1,0 +1,9 @@
+{
+  "_hash": "GGUeSDfu9EEclXXSMh1eDmY_jSE-s13POI7RiIALjCk",
+  "project": {
+    "rootDir": "/private/var/www/agent-demo/web"
+  },
+  "versions": {
+    "nuxt": "4.4.5"
+  }
+}

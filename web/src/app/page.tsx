@@ -6,6 +6,8 @@
  */
 import { useState, useEffect } from 'react';
 import { AgentChat } from '@/components/agent-chat';
+import { Sidebar } from '@/components/sidebar';
+import { useThreadList, ThreadItem } from '@/hooks/use-thread-list';
 
 interface AgentOption {
   id: string;
@@ -27,6 +29,8 @@ export default function HomePage() {
   const [threadId, setThreadId] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
   const [isConfigValid, setIsConfigValid] = useState(false);
+  const [threads, setThreads] = useState<ThreadItem[]>([]);
+  const { loadThreads, isLoading: isLoadingThreads } = useThreadList(userId);
 
   useEffect(() => {
     // 获取Agent列表
@@ -81,6 +85,13 @@ export default function HomePage() {
     setIsConfigValid(valid);
   }, [selectedAgent, userId, selectedModel]);
 
+  // 加载会话列表
+  useEffect(() => {
+    if (userId) {
+      loadThreads();
+    }
+  }, [userId, loadThreads]);
+
   // 保存userId到localStorage
   const handleUserIdChange = (value: string) => {
     setUserId(value);
@@ -93,6 +104,15 @@ export default function HomePage() {
     const newThreadId = crypto.randomUUID();
     localStorage.setItem(`thread_${selectedAgent}`, newThreadId);
     setThreadId(newThreadId);
+  };
+
+  const handleNewThread = () => {
+    if (!selectedAgent) return;
+    const newThreadId = crypto.randomUUID();
+    localStorage.setItem(`thread_${selectedAgent}`, newThreadId);
+    setThreadId(newThreadId);
+    // 重新加载会话列表
+    loadThreads();
   };
 
   // SSR时显示loading
@@ -111,7 +131,19 @@ export default function HomePage() {
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'row' }}>
+      {isConfigValid && (
+        <Sidebar
+          threads={threads}
+          currentThreadId={threadId}
+          onSelectThread={(newThreadId) => {
+            setThreadId(newThreadId);
+          }}
+          onNewThread={handleNewThread}
+          isLoading={isLoadingThreads}
+        />
+      )}
+
       <header style={{
         padding: '1rem',
         borderBottom: '1px solid #e5e5e5',

@@ -63,7 +63,8 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 ```bash
 cd server
 npx prisma generate      # 生成 Prisma Client
-npx prisma migrate dev   # 执行数据库迁移
+npx prisma db push       # 同步数据库结构
+mysql -u root agent_service < prisma/seed.sql  # 初始化种子数据
 ```
 
 ### 4. 启动服务

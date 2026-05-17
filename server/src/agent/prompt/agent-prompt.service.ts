@@ -10,8 +10,8 @@ export class AgentPromptService {
   /**
    * 构建完整的system prompt
    * 按以下顺序拼接:
-   * 1. agent.systemPrompt
-   * 2. agent.personaPrompt
+   * 1. agent.system_prompt
+   * 2. agent.persona_prompt
    * 3. 长期记忆
    * 4. 短期记忆
    * 5. 回复长度约束
@@ -31,13 +31,13 @@ export class AgentPromptService {
     const parts: string[] = [];
 
     // 1. 系统提示词
-    if (agent.systemPrompt) {
-      parts.push(`[系统提示]\n${agent.systemPrompt}`);
+    if (agent.system_prompt) {
+      parts.push(`[系统提示]\n${agent.system_prompt}`);
     }
 
     // 2. 角色设定
-    if (agent.personaPrompt) {
-      parts.push(`[角色设定]\n${agent.personaPrompt}`);
+    if (agent.persona_prompt) {
+      parts.push(`[角色设定]\n${agent.persona_prompt}`);
     }
 
     // 3. 业务画像(来自context)

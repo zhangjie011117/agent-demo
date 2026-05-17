@@ -65,14 +65,14 @@ export interface Agent {
   id: bigint;
   name: string;
   type: string;
-  systemPrompt: string;
-  personaPrompt: string;
-  chatModelId?: bigint;
-  shortTermMemoryConfig?: string;
-  longTermMemoryConfig?: string;
+  system_prompt: string;
+  persona_prompt: string;
+  chat_model_id?: bigint;
+  short_term_memory_config?: string;
+  long_term_memory_config?: string;
   enabled: boolean;
-  createdAt: bigint;
-  updatedAt: bigint;
+  created_at: bigint;
+  updated_at: bigint;
 }
 
 /**
@@ -82,12 +82,12 @@ export interface ChatModel {
   id: bigint;
   name: string;
   provider: string;
-  baseUrl?: string;
-  apiKey: string;
+  base_url?: string;
+  api_key: string;
   model: string;
   enabled: boolean;
-  createdAt: bigint;
-  updatedAt: bigint;
+  created_at: bigint;
+  updated_at: bigint;
 }
 
 /**
@@ -95,12 +95,12 @@ export interface ChatModel {
  */
 export interface AgentThread {
   id: bigint;
-  agentId: bigint;
-  userId: string;
+  agent_id: bigint;
+  user_id: string;
   uuid: string;
   name?: string;
-  createdAt: bigint;
-  updatedAt: bigint;
+  created_at: bigint;
+  updated_at: bigint;
 }
 
 /**
@@ -108,14 +108,16 @@ export interface AgentThread {
  */
 export interface AgentChat {
   id: bigint;
-  agentId: bigint;
-  threadId: bigint;
-  userId: string;
+  agent_id: bigint;
+  thread_id: bigint;
+  user_id: string;
   content: string;
   metadata?: string;
-  tokenUsage?: string;
-  createdAt: bigint;
-  updatedAt: bigint;
+  token_usage?: string;
+  rating?: number;
+  feedback?: string;
+  created_at: bigint;
+  updated_at: bigint;
 }
 
 /**
@@ -123,14 +125,14 @@ export interface AgentChat {
  */
 export interface AgentMessage {
   id: bigint;
-  agentId: bigint;
-  threadId: bigint;
-  chatId: bigint;
-  userId: string;
+  agent_id: bigint;
+  thread_id: bigint;
+  chat_id: bigint;
+  user_id: string;
   role: string;
   content: string;
-  tokenUsage?: string;
-  createdAt: bigint;
+  token_usage?: string;
+  created_at: bigint;
 }
 
 /**

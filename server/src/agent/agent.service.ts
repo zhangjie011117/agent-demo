@@ -54,43 +54,43 @@ export class AgentService {
 
     // 从forwardedProps获取userId
     const userId = forwardedProps.userId || 'anonymous';
-    const agentId = forwardedProps.agentId;
+    const agentIdStr = forwardedProps.agentId;
 
-    this.logger.log(`Starting agent run: ${runId}, agentId: ${agentId}, userId: ${userId}`);
+    this.logger.log(`Starting agent run: ${runId}, agentId: ${agentIdStr}, userId: ${userId}`);
 
     try {
-      // 1. 查询Agent (通过code字段)
+      // 1. 查询Agent (通过id字段)
       const agent = await this.prisma.agent.findFirst({
-        where: { code: agentId, enabled: true },
+        where: { id: BigInt(agentIdStr), enabled: true },
       });
 
       if (!agent) {
-        throw new NotFoundException(`Agent not found: ${agentId}`);
+        throw new NotFoundException(`Agent not found: ${agentIdStr}`);
       }
 
       // 2. 查询ChatModel
       const chatModel = await this.prisma.chatModel.findFirst({
-        where: { id: agent.chatModelId, enabled: true },
+        where: { id: agent.chat_model_id, enabled: true },
       });
 
       if (!chatModel) {
-        throw new NotFoundException(`ChatModel not found for agent: ${agentId}`);
+        throw new NotFoundException(`ChatModel not found for agent: ${agentIdStr}`);
       }
 
       // 3. 获取或创建AgentThread
       let thread = await this.prisma.agentThread.findFirst({
-        where: { uuid: threadId, userId },
+        where: { uuid: threadId, user_id: userId },
       });
 
       if (!thread) {
         const now = BigInt(Date.now());
         thread = await this.prisma.agentThread.create({
           data: {
-            agentId: agent.id,  // 使用BigInt类型的agent.id
-            userId,
+            agent_id: agent.id,  // 使用BigInt类型的agent.id
+            user_id: userId,
             uuid: threadId,
-            createdAt: now,
-            updatedAt: now,
+            created_at: now,
+            updated_at: now,
           },
         });
         this.logger.log(`Created new thread: ${thread.id}`);
@@ -106,8 +106,8 @@ export class AgentService {
       if (isContinuation) {
         // 续跑：获取最近chat，保存tool message
         currentChat = await this.prisma.agentChat.findFirst({
-          where: { threadId: thread.id },
-          orderBy: { createdAt: 'desc' },
+          where: { thread_id: thread.id },
+          orderBy: { created_at: 'desc' },
         });
 
         if (currentChat) {
@@ -116,16 +116,16 @@ export class AgentService {
           const now = BigInt(Date.now());
           await this.prisma.agentMessage.create({
             data: {
-              agentId: agent.id,
-              threadId: thread.id,
-              chatId: currentChat.id,
-              userId,
+              agent_id: agent.id,
+              thread_id: thread.id,
+              chat_id: currentChat.id,
+              user_id: userId,
               role: 'tool',
               content: JSON.stringify({
                 toolCallId: lastMessage.toolCallId,
                 text: lastMessage.content,
               }),
-              createdAt: now,
+              created_at: now,
             },
           });
           this.logger.log(`Saved tool message to chat: ${currentChat.id}`);
@@ -146,25 +146,25 @@ export class AgentService {
         const now = BigInt(Date.now());
         currentChat = await this.prisma.agentChat.create({
           data: {
-            agentId: agent.id,
-            threadId: thread.id,
-            userId,
+            agent_id: agent.id,
+            thread_id: thread.id,
+            user_id: userId,
             content: userMessageContent,
-            createdAt: now,
-            updatedAt: now,
+            created_at: now,
+            updated_at: now,
           },
         });
 
         // 保存user message
         await this.prisma.agentMessage.create({
           data: {
-            agentId: agent.id,
-            threadId: thread.id,
-            chatId: currentChat.id,
-            userId,
+            agent_id: agent.id,
+            thread_id: thread.id,
+            chat_id: currentChat.id,
+            user_id: userId,
             role: 'user',
             content: JSON.stringify({ text: userMessageContent }),
-            createdAt: now,
+            created_at: now,
           },
         });
 
@@ -213,15 +213,15 @@ export class AgentService {
       // 创建LLM实例
       const llmConfig: any = {
         model: chatModel.model || 'deepseek-chat',
-        apiKey: chatModel.apiKey,
+        apiKey: chatModel.api_key,
         streaming: true,
         temperature: 0.7,
       };
 
       // 如果有自定义baseUrl，使用configuration
-      if (chatModel.baseUrl) {
+      if (chatModel.base_url) {
         llmConfig.configuration = {
-          baseURL: chatModel.baseUrl,
+          baseURL: chatModel.base_url,
         };
       }
 
@@ -266,13 +266,13 @@ export class AgentService {
       const now = BigInt(Date.now());
       await this.prisma.agentMessage.create({
         data: {
-          agentId: agent.id,
-          threadId: thread.id,
-          chatId: currentChat.id,
-          userId,
+          agent_id: agent.id,
+          thread_id: thread.id,
+          chat_id: currentChat.id,
+          user_id: userId,
           role: 'assistant',
           content: JSON.stringify({ text: fullResponse }),
-          createdAt: now,
+          created_at: now,
         },
       });
 

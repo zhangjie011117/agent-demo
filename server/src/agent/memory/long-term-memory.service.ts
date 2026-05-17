@@ -18,9 +18,9 @@ export class LongTermMemoryService {
   async getMemory(agentId: bigint, userId: string): Promise<string | null> {
     const memory = await this.prisma.agentMemory.findUnique({
       where: {
-        agentId_userId: {
-          agentId,
-          userId,
+        agent_id_user_id: {
+          agent_id: agentId,
+          user_id: userId,
         },
       },
     });
@@ -37,21 +37,21 @@ export class LongTermMemoryService {
     const now = BigInt(Date.now());
     await this.prisma.agentMemory.upsert({
       where: {
-        agentId_userId: {
-          agentId,
-          userId,
+        agent_id_user_id: {
+          agent_id: agentId,
+          user_id: userId,
         },
       },
       update: {
         content,
-        updatedAt: now,
+        updated_at: now,
       },
       create: {
-        agentId,
-        userId,
+        agent_id: agentId,
+        user_id: userId,
         content,
-        createdAt: now,
-        updatedAt: now,
+        created_at: now,
+        updated_at: now,
       },
     });
   }
@@ -73,13 +73,13 @@ export class LongTermMemoryService {
       where: { id: agentId },
     });
 
-    if (!agent?.longTermMemoryConfig) {
+    if (!agent?.long_term_memory_config) {
       return;
     }
 
-    const config = typeof agent.longTermMemoryConfig === 'string'
-      ? JSON.parse(agent.longTermMemoryConfig)
-      : agent.longTermMemoryConfig;
+    const config = typeof agent.long_term_memory_config === 'string'
+      ? JSON.parse(agent.long_term_memory_config)
+      : agent.long_term_memory_config;
 
     // 检查是否启用且自动提取
     if (!config?.enabled || !config?.autoExtract) {
@@ -88,7 +88,7 @@ export class LongTermMemoryService {
 
     // 检查是否达到提取周期
     const messageCount = await this.prisma.agentMessage.count({
-      where: { chatId },
+      where: { chat_id: chatId },
     });
 
     // 每N条消息提取一次
@@ -112,8 +112,8 @@ export class LongTermMemoryService {
     try {
       // 获取最近最多40条消息
       const messages = await this.prisma.agentMessage.findMany({
-        where: { chatId },
-        orderBy: { createdAt: 'desc' },
+        where: { chat_id: chatId },
+        orderBy: { created_at: 'desc' },
         take: 40,
       });
 

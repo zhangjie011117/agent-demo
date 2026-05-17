@@ -18,12 +18,12 @@ export class ShortTermMemoryService {
   async getHistory(threadId: bigint, limit: number = 10): Promise<string> {
     // 查询最近N轮chat，每轮包含其messages
     const chats = await this.prisma.agentChat.findMany({
-      where: { threadId },
-      orderBy: { createdAt: 'desc' },
+      where: { thread_id: threadId },
+      orderBy: { created_at: 'desc' },
       take: limit,
       include: {
         messages: {
-          orderBy: { createdAt: 'asc' },
+          orderBy: { created_at: 'asc' },
         },
       },
     });

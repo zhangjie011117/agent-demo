@@ -7,6 +7,8 @@ import { LongTermMemoryService } from './memory/long-term-memory.service';
 import { AgentPromptService } from './prompt/agent-prompt.service';
 import { RunAgentInputDto } from './dto/run-agent-input.dto';
 import { GetChatsQueryDto } from './dto/get-chats-query.dto';
+import { GetThreadsQueryDto } from './dto/get-threads-query.dto';
+import { ThreadItemDto } from './dto/thread-item.dto';
 import { Agent } from './types/agent.types';
 import { ChatOpenAI } from '@langchain/openai';
 
@@ -152,6 +154,57 @@ export class AgentService {
         nextCursor,
       },
     };
+  }
+
+  /**
+   * 获取用户的所有线程
+   * @param query - GetThreadsQueryDto
+   * @returns 线程列表
+   */
+  async getThreads(query: GetThreadsQueryDto): Promise<{ data: ThreadItemDto[] }> {
+    const { userId } = query;
+
+    // 查询用户的所有线程
+    const threads = await this.prisma.agentThread.findMany({
+      where: { user_id: userId },
+      orderBy: { created_at: 'desc' },
+      include: {
+        chats: {
+          orderBy: { created_at: 'asc' },
+          take: 1, // 只取第一条 chat
+          include: {
+            messages: {
+              where: { role: 'user' },
+              orderBy: { created_at: 'asc' },
+              take: 1, // 只取第一条用户消息
+            },
+          },
+        },
+      },
+    });
+
+    const data: ThreadItemDto[] = threads.map((thread) => {
+      // 获取第一条用户消息作为名称
+      let name = '新会话';
+      const firstChat = thread.chats[0];
+      if (firstChat) {
+        const firstUserMessage = firstChat.messages[0];
+        if (firstUserMessage) {
+          const content = JSON.parse(firstUserMessage.content);
+          const text = content?.text || '';
+          name = text.substring(0, 30) + (text.length > 30 ? '...' : '');
+        }
+      }
+
+      return {
+        threadId: thread.uuid,
+        name,
+        createdAt: new Date(Number(thread.created_at)).toISOString(),
+        agentId: thread.agent_id.toString(),
+      };
+    });
+
+    return { data };
   }
 
   /**

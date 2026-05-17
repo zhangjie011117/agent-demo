@@ -181,7 +181,7 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     // 调用Agent，包含当前用户输入
     await runAgent({
       messages: [
-        ...messages.map((m) => ({
+        ...allMessages.map((m) => ({
           id: m.id,
           role: m.role,
           content: m.content,

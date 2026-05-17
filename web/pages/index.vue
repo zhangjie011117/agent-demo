@@ -119,10 +119,6 @@ const handleUserIdInput = (event: Event) => {
     </aside>
 
     <main class="flex-1 flex flex-col min-w-0">
-      <header class="h-16 px-6 bg-default border-b border-default flex items-center gap-4">
-        <span class="text-lg font-medium">Agent Chat</span>
-      </header>
-
       <div class="flex-1 flex flex-col">
         <div class="px-6 py-3 bg-muted border-b border-default flex flex-wrap items-center gap-4">
           <div class="flex items-center gap-2">

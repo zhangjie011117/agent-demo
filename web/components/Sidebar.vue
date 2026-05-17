@@ -48,7 +48,7 @@ const emit = defineEmits<{
           :key="thread.threadId"
           class="group relative cursor-pointer rounded-xl border px-3 py-2.5 transition-all"
           :class="thread.threadId === currentThreadId
-            ? 'border-primary/40 bg-primary/10 shadow-md ring-1 ring-primary/30'
+            ? 'border-transparent bg-primary/10'
             : 'border-transparent text-toned hover:bg-elevated/70'"
           @click="emit('select', thread.threadId)"
         >

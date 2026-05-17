@@ -1,0 +1,172 @@
+// 数据源配置 - MySQL
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Prisma 客户端生成器
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// Agent: AI智能体配置
+// ==========================================
+model Agent {
+  id                  BigInt  @id @default(autoincrement())
+  code                String   @unique                    // 唯一标识符(如 "agent_test")
+  name                String                             // Agent名称
+  type                String   @default("assistant")   // 类型：assistant
+  systemPrompt        String   @db.Text                // 系统提示词
+  personaPrompt       String   @db.Text               // 角色设定
+  chatModelId         BigInt?                          // 关联的ChatModel
+  // 短期记忆配置: { "enabled": true, "limitHistoryTurns": 10 }
+  shortTermMemoryConfig Json?
+  // 长期记忆配置: { "enabled": true, "autoExtract": true, "extractIntervalTurns": 20 }
+  longTermMemoryConfig  Json?
+  enabled             Boolean  @default(true)         // 是否启用
+  createdAt           BigInt                             // 创建时间戳
+  updatedAt           BigInt                             // 更新时间戳
+
+  chatModel           ChatModel?   @relation(fields: [chatModelId], references: [id])
+  threads             AgentThread[]
+  memories            AgentMemory[]
+  tools               AgentTool[]
+}
+
+// ==========================================
+// ChatModel: AI模型配置
+// ==========================================
+model ChatModel {
+  id        BigInt  @id @default(autoincrement())
+  code      String   @unique                       // 唯一标识符(如 "cm_default")
+  name      String                               // 模型配置名称
+  provider  String                               //  provider: deepseek / openai / azure
+  baseUrl   String?                              // API地址(可选，用于代理)
+  apiKey    String   @db.Text                    // API密钥
+  model     String                               // 模型名: deepseek-chat / gpt-4o
+  enabled   Boolean  @default(true)
+  createdAt BigInt                             // 创建时间戳
+  updatedAt BigInt                             // 更新时间戳
+
+  agents    Agent[]
+}
+
+// ==========================================
+// AgentThread: 对话线程
+// 用户与Agent的一个会话上下文
+// ==========================================
+model AgentThread {
+  id        BigInt  @id @default(autoincrement())
+  agentId   BigInt                           // 所属Agent
+  userId    String                           // 用户ID
+  uuid      String                           // 客户端提供的threadId(全局唯一)
+  name      String?                          // 线程名称
+  createdAt BigInt                             // 创建时间戳
+  updatedAt BigInt                             // 更新时间戳
+
+  agent     Agent      @relation(fields: [agentId], references: [id])
+  chats     AgentChat[]
+
+  @@unique([uuid, userId])                   // 同一用户下threadId唯一
+  @@index([agentId, userId])
+}
+
+// ==========================================
+// AgentChat: 一次对话(一轮)
+// 包含用户输入和对应的助手回复
+// ==========================================
+model AgentChat {
+  id          BigInt  @id @default(autoincrement())
+  agentId     BigInt                           // 所属Agent
+  threadId    BigInt                           // 所属线程
+  userId      String                           // 用户ID
+  content     String   @db.Text                // 用户本轮输入的消息
+  metadata    Json?                           // 元数据(扩展字段)
+  tokenUsage  Json?                           // token使用量统计
+  rating      Int?                             // 用户评分(可选)
+  feedback    String?                          // 用户反馈(可选)
+  createdAt   BigInt                             // 创建时间戳
+  updatedAt   BigInt                             // 更新时间戳
+
+  thread      AgentThread    @relation(fields: [threadId], references: [id])
+  messages    AgentMessage[]
+
+  @@index([threadId, createdAt])              // 按线程和时间查询
+  @@index([agentId, createdAt])
+}
+
+// ==========================================
+// AgentMessage: 对话消息
+// 记录每轮对话中的每条消息(用户/助手/工具)
+// ==========================================
+model AgentMessage {
+  id          BigInt  @id @default(autoincrement())
+  agentId     BigInt                           // 所属Agent
+  threadId    BigInt                           // 所属线程
+  chatId      BigInt                           // 所属Chat
+  userId      String                           // 用户ID
+  role        String                           // 角色: user / assistant / tool
+  // 消息内容(JSON格式):
+  // - 文本消息: { "text": "消息内容" }
+  // - 工具调用: { "toolCallId": "xxx", "text": "工具参数" }
+  content     String   @db.Text
+  tokenUsage  Json?                           // token使用量
+  createdAt   BigInt                             // 创建时间戳
+
+  chat        AgentChat @relation(fields: [chatId], references: [id])
+
+  @@index([threadId, createdAt])              // 按线程检索消息
+  @@index([chatId, createdAt])                // 按Chat关联查询
+}
+
+// ==========================================
+// AgentMemory: 长期记忆
+// 由AI自动总结的用户偏好、习惯等
+// ==========================================
+model AgentMemory {
+  id        BigInt  @id @default(autoincrement())
+  agentId   BigInt                           // 所属Agent
+  userId    String                           // 用户ID
+  content   String   @db.Text                // 记忆内容
+  createdAt BigInt                             // 创建时间戳
+  updatedAt BigInt                             // 更新时间戳
+
+  agent     Agent    @relation(fields: [agentId], references: [id])
+
+  @@unique([agentId, userId])                // 每个用户每个Agent一条记忆
+  @@index([agentId])
+}
+
+// ==========================================
+// Tool: 可用工具定义
+// ==========================================
+model Tool {
+  id           BigInt  @id @default(autoincrement())
+  name         String   @unique               // 工具唯一名称
+  description  String?                        // 工具描述
+  type         String   @default("builtin")   // 类型: builtin / mcp
+  functionName String?                        // 函数名(用于builtin类型)
+  mcpServer    String?                       // MCP服务器(用于mcp类型)
+  prompt       String?  @db.Text              // 工具使用提示词
+  enabled      Boolean  @default(true)
+  createdAt    BigInt                             // 创建时间戳
+  updatedAt    BigInt                             // 更新时间戳
+
+  agents       AgentTool[]
+
+  @@index([type])
+}
+
+// ==========================================
+// AgentTool: Agent与Tool的关联关系
+// ==========================================
+model AgentTool {
+  agentId BigInt
+  toolId  BigInt
+
+  agent   Agent @relation(fields: [agentId], references: [id])
+  tool    Tool  @relation(fields: [toolId], references: [id])
+
+  @@id([agentId, toolId])
+}

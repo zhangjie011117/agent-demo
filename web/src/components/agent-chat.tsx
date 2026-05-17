@@ -5,11 +5,8 @@
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Input, Spin, Avatar } from 'antd';
-import { UserOutlined, RobotOutlined } from '@ant-design/icons';
 import { useAgentRun, useAgentChat } from '@/hooks/use-agent-run';
 import { useThreadHistory } from '@/hooks/use-thread-history';
-
-const { TextArea } = Input;
 
 interface AgentChatProps {
   agentId: string;
@@ -169,7 +166,7 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
             }}
           >
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', maxWidth: '70%' }}>
-              {msg.role !== 'user' && <Avatar icon={<RobotOutlined />} style={{ background: '#1890ff' }} />}
+              {msg.role !== 'user' && <Avatar style={{ background: '#1890ff' }}>AI</Avatar>}
               <div
                 style={{
                   padding: '12px 16px',
@@ -183,14 +180,14 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
               >
                 {String(msg.content)}
               </div>
-              {msg.role === 'user' && <Avatar icon={<UserOutlined />} style={{ background: '#52c41a' }} />}
+              {msg.role === 'user' && <Avatar style={{ background: '#52c41a' }}>我</Avatar>}
             </div>
           </div>
         ))}
 
         {isGenerating && (
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '16px' }}>
-            <Avatar icon={<RobotOutlined />} style={{ background: '#1890ff' }} />
+            <Avatar style={{ background: '#1890ff' }}>AI</Avatar>
             <div style={{ padding: '12px 16px', borderRadius: '16px', background: '#fff' }}>
               <Spin size="small" tip="正在思考..." />
             </div>
@@ -202,7 +199,7 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
 
       {/* 输入框 */}
       <div style={{ padding: '16px 24px', background: '#fff', borderTop: '1px solid #f0f0f0' }}>
-        <TextArea
+        <Input.TextArea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="输入消息..."

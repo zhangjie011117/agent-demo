@@ -1,7 +1,6 @@
 'use client';
 
 import { List, Button, Spin } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
 import { ThreadItem } from '@/hooks/use-thread-list';
 
 interface SidebarProps {
@@ -26,11 +25,10 @@ export function Sidebar({ threads, currentThreadId, onSelectThread, onNewThread,
       <div style={{ padding: '12px' }}>
         <Button
           type="primary"
-          icon={<PlusOutlined />}
           onClick={onNewThread}
           block
         >
-          新建会话
+          + 新建会话
         </Button>
       </div>
 

@@ -9,6 +9,10 @@ export class GetChatsQueryDto {
   @IsNotEmpty()
   threadId: string;
 
+  @IsString()
+  @IsNotEmpty()
+  userId: string;
+
   @IsOptional()
   @IsString()
   beforeMessageId?: string;

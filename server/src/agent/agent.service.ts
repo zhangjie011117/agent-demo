@@ -50,11 +50,11 @@ export class AgentService {
    * @returns 嵌套结构的聊天数据
    */
   async getChats(query: GetChatsQueryDto) {
-    const { threadId, beforeMessageId, limit = 20 } = query;
+    const { threadId, userId, beforeMessageId, limit = 20 } = query;
 
     // 1. 查找线程
     const thread = await this.prisma.agentThread.findFirst({
-      where: { uuid: threadId },
+      where: { uuid: threadId, user_id: userId },
     });
 
     if (!thread) {

@@ -5,7 +5,6 @@ import {
   Post,
   Body,
   Param,
-  Query,
   Res,
   HttpCode,
   HttpStatus,
@@ -14,9 +13,6 @@ import { Response } from 'express';
 import { AgentService } from '../service/service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { RunAgentInputDto } from '../../dto/run-agent-input.dto';
-import { GetChatsQueryDto } from '../../dto/get-chats-query.dto';
-import { GetThreadsQueryDto } from '../../dto/get-threads-query.dto';
-import { CreateThreadDto } from '../../dto/create-thread.dto';
 
 /**
  * Agent控制器

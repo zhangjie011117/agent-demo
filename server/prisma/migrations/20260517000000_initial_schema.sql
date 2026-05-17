@@ -1,19 +1,8 @@
 -- ==========================================
--- Agent Field Modification Migration
+-- Initial Schema Migration
 -- 日期: 2026-05-17
--- 描述: agent表name改为varchar(100)，type改为varchar(32)，所有字段添加备注
--- 注意: 此迁移会清空所有数据
+-- 描述: 初始化完整数据库结构
 -- ==========================================
-
--- Drop existing tables in reverse dependency order
-DROP TABLE IF EXISTS `agent_tool`;
-DROP TABLE IF EXISTS `tool`;
-DROP TABLE IF EXISTS `agent_memory`;
-DROP TABLE IF EXISTS `agent_message`;
-DROP TABLE IF EXISTS `agent_chat`;
-DROP TABLE IF EXISTS `agent_thread`;
-DROP TABLE IF EXISTS `agent`;
-DROP TABLE IF EXISTS `chat_model`;
 
 -- ==========================================
 -- ChatModel: AI模型配置
@@ -169,3 +158,4 @@ ALTER TABLE `agent_message` ADD CONSTRAINT `agent_message_chat_id_fkey` FOREIGN 
 ALTER TABLE `agent_memory` ADD CONSTRAINT `agent_memory_agent_id_fkey` FOREIGN KEY (`agent_id`) REFERENCES `agent`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE `agent_tool` ADD CONSTRAINT `agent_tool_agent_id_fkey` FOREIGN KEY (`agent_id`) REFERENCES `agent`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE `agent_tool` ADD CONSTRAINT `agent_tool_tool_id_fkey` FOREIGN KEY (`tool_id`) REFERENCES `tool`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+

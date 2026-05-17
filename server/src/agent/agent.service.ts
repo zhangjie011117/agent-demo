@@ -90,26 +90,8 @@ export class AgentService {
         return { data: [], pagination: { hasMore: false, nextCursor: null } };
       }
 
-      // 找到 cursor 时间点之后的第一条 Chat 的最早消息作为 nextCursor 基准
-      const nextCursorChat = await this.prisma.agentChat.findFirst({
-        where: {
-          thread_id: thread.id,
-          created_at: { gt: cursorChat.created_at },
-        },
-        orderBy: { created_at: 'asc' },
-      });
-
-      if (nextCursorChat) {
-        const firstMessage = await this.prisma.agentMessage.findFirst({
-          where: { chat_id: nextCursorChat.id },
-          orderBy: { created_at: 'asc' },
-        });
-        if (firstMessage) {
-          whereCondition.created_at = { lt: cursorChat.created_at };
-        }
-      } else {
-        whereCondition.created_at = { lt: cursorChat.created_at };
-      }
+      // 使用 cursorChat 的时间作为上界
+      whereCondition.created_at = { lt: cursorChat.created_at };
     }
 
     // 3. 查询 Chats（多取一条用于判断 hasMore）
@@ -149,9 +131,16 @@ export class AgentService {
     // 6. 计算 nextCursor（最老一条 Chat 的第一条消息 ID）
     let nextCursor: string | null = null;
     if (hasMore && chats.length > 0) {
-      const oldestChat = chats[0];
-      if (oldestChat.messages.length > 0) {
-        nextCursor = oldestChat.messages[0].id.toString();
+      // 找到最老的有消息的 chat
+      for (const chat of chats) {
+        if (chat.messages.length > 0) {
+          nextCursor = chat.messages[0].id.toString();
+          break;
+        }
+      }
+      // 如果所有 chat 都没有消息，hasMore 应该是 false
+      if (!nextCursor) {
+        hasMore = false;
       }
     }
 

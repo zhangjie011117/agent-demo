@@ -59,12 +59,12 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
   // 合并历史消息和当前消息
   const allMessages = [...historyMessages, ...messages];
 
-  // Auto-scroll to bottom when new messages arrive (but not during history load)
+  // Auto-scroll to bottom when new messages arrive or history loads
   useEffect(() => {
-    if (!isLoadingHistory && messages.length > 0) {
+    if (!isLoadingHistory) {
       scrollToBottom();
     }
-  }, [messages, isLoadingHistory, scrollToBottom]);
+  }, [historyChats, isLoadingHistory, scrollToBottom]);
 
   // SSE事件处理
   const handleSSEEvent = useCallback((event: any) => {

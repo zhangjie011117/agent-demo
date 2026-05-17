@@ -66,6 +66,14 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     }
   }, [historyChats, isLoadingHistory, scrollToBottom]);
 
+  // 初始加载历史消息
+  useEffect(() => {
+    if (threadId && userId) {
+      loadMore();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadId, userId]);
+
   // SSE事件处理
   const handleSSEEvent = useCallback((event: any) => {
     console.log('AG-UI Event:', event.type, event.data);

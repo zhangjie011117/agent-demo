@@ -55,6 +55,7 @@ export class AgentService {
     // 从forwardedProps获取userId
     const userId = forwardedProps.userId || 'anonymous';
     const agentIdStr = forwardedProps.agentId;
+    const customModel = forwardedProps.model;
 
     this.logger.log(`Starting agent run: ${runId}, agentId: ${agentIdStr}, userId: ${userId}`);
 
@@ -212,7 +213,7 @@ export class AgentService {
 
       // 创建LLM实例
       const llmConfig: any = {
-        model: chatModel.model || 'deepseek-chat',
+        model: customModel || chatModel.model || 'deepseek-chat',
         apiKey: chatModel.api_key,
         streaming: true,
         temperature: 0.7,

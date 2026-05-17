@@ -64,6 +64,10 @@ export class ForwardedPropsDto {
   userId?: string;
 
   @IsOptional()
+  @IsString()
+  model?: string;
+
+  @IsOptional()
   @IsArray()
   clientDatasetIds?: string[];
 

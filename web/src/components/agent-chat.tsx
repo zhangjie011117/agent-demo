@@ -11,6 +11,7 @@ interface AgentChatProps {
   agentId: string;
   threadId: string;
   userId: string;
+  model?: string;
 }
 
 /**
@@ -19,7 +20,7 @@ interface AgentChatProps {
  * @param threadId - 线程 ID
  * @param userId - 用户 ID
  */
-export function AgentChat({ agentId, threadId, userId }: AgentChatProps) {
+export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) {
   const {
     messages,
     input,
@@ -165,6 +166,7 @@ export function AgentChat({ agentId, threadId, userId }: AgentChatProps) {
       forwardedProps: {
         agentId,
         userId,
+        model,
       },
     });
   };

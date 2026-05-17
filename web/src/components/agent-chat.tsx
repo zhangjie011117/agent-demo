@@ -6,6 +6,7 @@
  */
 import { useState, useCallback } from 'react';
 import { useAgentRun, useAgentChat } from '@/hooks/use-agent-run';
+import { useThreadHistory } from '@/hooks/use-thread-history';
 
 interface AgentChatProps {
   agentId: string;
@@ -31,6 +32,25 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
   } = useAgentChat();
 
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const {
+    chats: historyChats,
+    loadMore,
+    hasMore,
+    isLoading: isLoadingHistory,
+  } = useThreadHistory(threadId, userId);
+
+  // 将 history chats 转为扁平消息列表
+  const historyMessages = historyChats.flatMap((chat) =>
+    chat.messages.map((msg) => ({
+      id: msg.id,
+      role: msg.role as 'user' | 'assistant' | 'system' | 'tool',
+      content: typeof msg.content === 'string' ? msg.content : msg.content?.text || '',
+    }))
+  );
+
+  // 合并历史消息和当前消息
+  const allMessages = [...historyMessages, ...messages];
 
   // SSE事件处理
   const handleSSEEvent = useCallback((event: any) => {
@@ -124,6 +144,17 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     }
   }, [setMessages]);
 
+  const handleScroll = useCallback(
+    (e: React.UIEvent<HTMLDivElement>) => {
+      const target = e.target as HTMLDivElement;
+      // 滚动到顶部时加载更多
+      if (target.scrollTop === 0 && hasMore && !isLoadingHistory) {
+        loadMore();
+      }
+    },
+    [hasMore, isLoadingHistory, loadMore]
+  );
+
   const { runAgent } = useAgentRun({
     agentId,
     threadId,
@@ -184,7 +215,13 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
         flex: 1,
         overflow: 'auto',
         padding: '1rem',
-      }}>
+      }} onScroll={handleScroll}>
+        {isLoadingHistory && (
+          <div style={{ textAlign: 'center', padding: '0.5rem', color: '#999' }}>
+            加载更多...
+          </div>
+        )}
+
         {messages.length === 0 && (
           <div style={{
             textAlign: 'center',

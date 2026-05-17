@@ -1,7 +1,9 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
+  Query,
   Res,
   HttpCode,
   HttpStatus,
@@ -10,6 +12,7 @@ import {
 import { Response } from 'express';
 import { AgentService } from './agent.service';
 import { RunAgentInputDto } from './dto/run-agent-input.dto';
+import { GetChatsQueryDto } from './dto/get-chats-query.dto';
 
 /**
  * Agent控制器
@@ -63,5 +66,15 @@ export class AgentController {
       this.logger.log(`Client disconnected for run: ${input.runId}`);
       subscription.unsubscribe();
     });
+  }
+
+  /**
+   * GET /agent/chats
+   * 获取线程下的聊天历史（按 AgentChat 嵌套组织）
+   */
+  @Get('chats')
+  async getChats(@Query() query: GetChatsQueryDto) {
+    this.logger.log(`Getting chats for thread: ${query.threadId}`);
+    return this.agentService.getChats(query);
   }
 }

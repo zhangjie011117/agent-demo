@@ -1,13 +1,16 @@
 'use client';
 
 /**
- * 主页
- * 显示Agent列表、配置用户ID和模型，然后进入对话
+ * 主页 - 使用 Ant Design Vue
  */
 import { useState, useEffect } from 'react';
+import { Layout, Select, Input, Button, message, ConfigProvider } from 'antd';
 import { AgentChat } from '@/components/agent-chat';
 import { Sidebar } from '@/components/sidebar';
 import { useThreadList, ThreadItem } from '@/hooks/use-thread-list';
+import zhCN from 'antd/locale/zh_CN';
+
+const { Header, Sider, Content } = Layout;
 
 interface AgentOption {
   id: string;
@@ -29,11 +32,11 @@ export default function HomePage() {
   const [threadId, setThreadId] = useState<string>('');
   const [isReady, setIsReady] = useState(false);
   const [isConfigValid, setIsConfigValid] = useState(false);
-  const [threads, setThreads] = useState<ThreadItem[]>([]);
-  const { loadThreads, isLoading: isLoadingThreads } = useThreadList(userId);
+  const [messageApi, contextHolder] = message.useMessage();
+
+  const { threads, loadThreads, isLoading: isLoadingThreads } = useThreadList(userId);
 
   useEffect(() => {
-    // 获取Agent列表
     const apiUrl = process.env.NEXT_PUBLIC_AGENT_API_URL || 'http://localhost:3000';
 
     Promise.all([
@@ -57,17 +60,11 @@ export default function HomePage() {
         console.error('Failed to fetch config:', err);
       });
 
-    // 从localStorage获取已保存的userId
-    let storedUserId = localStorage.getItem('userId');
-    if (!storedUserId) {
-      storedUserId = '';
-    }
+    let storedUserId = localStorage.getItem('userId') || '';
     setUserId(storedUserId);
-
     setIsReady(true);
   }, []);
 
-  // 当选择Agent时，初始化该Agent的threadId
   useEffect(() => {
     if (selectedAgent) {
       let storedThreadId = localStorage.getItem(`thread_${selectedAgent}`);
@@ -79,219 +76,130 @@ export default function HomePage() {
     }
   }, [selectedAgent]);
 
-  // 验证配置是否有效
   useEffect(() => {
     const valid = selectedAgent.trim().length > 0 && userId.trim().length > 0 && selectedModel.length > 0;
     setIsConfigValid(valid);
   }, [selectedAgent, userId, selectedModel]);
 
-  // 加载会话列表
   useEffect(() => {
     if (userId) {
       loadThreads();
     }
   }, [userId, loadThreads]);
 
-  // 保存userId到localStorage
-  const handleUserIdChange = (value: string) => {
-    setUserId(value);
-    localStorage.setItem('userId', value);
-  };
-
-  // 清除对话并重置
   const handleReset = () => {
     if (!selectedAgent) return;
     const newThreadId = crypto.randomUUID();
     localStorage.setItem(`thread_${selectedAgent}`, newThreadId);
     setThreadId(newThreadId);
+    messageApi.success('对话已清除');
   };
 
   const handleNewThread = () => {
-    if (!selectedAgent) return;
+    if (!selectedAgent) {
+      messageApi.warning('请先选择 Agent');
+      return;
+    }
     const newThreadId = crypto.randomUUID();
     localStorage.setItem(`thread_${selectedAgent}`, newThreadId);
     setThreadId(newThreadId);
-    // 重新加载会话列表
     loadThreads();
+    messageApi.success('新会话已创建');
   };
 
-  // SSR时显示loading
   if (!isReady) {
     return (
-      <div style={{
-        height: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#666'
-      }}>
-        加载中...
-      </div>
+      <ConfigProvider locale={zhCN}>
+        <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          加载中...
+        </div>
+      </ConfigProvider>
     );
   }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'row' }}>
-      {isConfigValid && (
-        <Sidebar
-          threads={threads}
-          currentThreadId={threadId}
-          onSelectThread={(newThreadId) => {
-            setThreadId(newThreadId);
-          }}
-          onNewThread={handleNewThread}
-          isLoading={isLoadingThreads}
-        />
-      )}
-
-      <header style={{
-        padding: '1rem',
-        borderBottom: '1px solid #e5e5e5',
-        background: '#fff'
-      }}>
-        <h1 style={{ margin: 0, fontSize: '1.25rem' }}>Agent Chat</h1>
-        {selectedAgent && (
-          <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: '#666' }}>
-            Thread: {threadId}
-          </p>
+    <ConfigProvider locale={zhCN}>
+      {contextHolder}
+      <Layout style={{ minHeight: '100vh' }}>
+        {isConfigValid && (
+          <Sider width={280} style={{ background: '#fafafa', borderRight: '1px solid #f0f0f0' }}>
+            <Sidebar
+              threads={threads}
+              currentThreadId={threadId}
+              onSelectThread={(newThreadId) => setThreadId(newThreadId)}
+              onNewThread={handleNewThread}
+              isLoading={isLoadingThreads}
+            />
+          </Sider>
         )}
-      </header>
-
-      {/* 配置面板 */}
-      <div style={{
-        padding: '1rem',
-        background: '#f5f5f5',
-        borderBottom: '1px solid #e5e5e5',
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        alignItems: 'center'
-      }}>
-        {/* Agent选择 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>Agent:</label>
-          <select
-            value={selectedAgent}
-            onChange={(e) => setSelectedAgent(e.target.value)}
-            disabled={agents.length === 0}
-            style={{
-              padding: '0.5rem 0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '0.875rem',
-              width: '180px',
-              background: '#fff',
-            }}
-          >
-            <option value="">选择 Agent</option>
-            {agents.map((agent) => (
-              <option key={agent.id} value={agent.id}>
-                {agent.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* 用户ID输入 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>用户ID:</label>
-          <input
-            type="text"
-            value={userId}
-            onChange={(e) => handleUserIdChange(e.target.value)}
-            placeholder="输入用户ID"
-            style={{
-              padding: '0.5rem 0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '0.875rem',
-              width: '180px',
-            }}
-          />
-        </div>
-
-        {/* 模型选择 */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <label style={{ fontSize: '0.875rem', fontWeight: 500 }}>模型:</label>
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            disabled={models.length === 0}
-            style={{
-              padding: '0.5rem 0.75rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              fontSize: '0.875rem',
-              width: '200px',
-              background: '#fff',
-            }}
-          >
-            {models.length === 0 && (
-              <option value="">加载中...</option>
+        <Layout>
+          <Header style={{ background: '#fff', padding: '0 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ fontSize: 18, fontWeight: 500 }}>Agent Chat</div>
+            {threadId && (
+              <div style={{ fontSize: 12, color: '#999' }}>
+                Thread: {threadId.substring(0, 8)}...
+              </div>
             )}
-            {models.map((model) => (
-              <option key={model.id} value={model.id}>
-                {model.name} ({model.provider})
-              </option>
-            ))}
-          </select>
-        </div>
+          </Header>
 
-        {/* 操作按钮 */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginLeft: 'auto' }}>
-          <button
-            onClick={handleReset}
-            disabled={!selectedAgent}
-            style={{
-              padding: '0.5rem 1rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '6px',
-              background: '#fff',
-              color: selectedAgent ? '#666' : '#ccc',
-              fontSize: '0.875rem',
-              cursor: selectedAgent ? 'pointer' : 'not-allowed',
-            }}
-          >
-            清除对话
-          </button>
-        </div>
-      </div>
+          <Content style={{ display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '12px 24px', background: '#fafafa', borderBottom: '1px solid #f0f0f0', display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>Agent:</span>
+                <Select
+                  value={selectedAgent}
+                  onChange={setSelectedAgent}
+                  placeholder="选择 Agent"
+                  style={{ width: 180 }}
+                  options={agents.map(a => ({ value: a.id, label: a.name }))}
+                />
+              </div>
 
-      {/* 配置提示 */}
-      {!isConfigValid && (
-        <div style={{
-          padding: '0.75rem 1rem',
-          background: '#fef3cd',
-          color: '#856404',
-          fontSize: '0.875rem',
-          textAlign: 'center'
-        }}>
-          请选择 Agent、输入用户ID后开始对话
-        </div>
-      )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>用户ID:</span>
+                <Input
+                  value={userId}
+                  onChange={(e) => {
+                    setUserId(e.target.value);
+                    localStorage.setItem('userId', e.target.value);
+                  }}
+                  placeholder="输入用户ID"
+                  style={{ width: 180 }}
+                />
+              </div>
 
-      {/* 聊天区域 */}
-      {isConfigValid ? (
-        <AgentChat
-          agentId={selectedAgent}
-          threadId={threadId}
-          userId={userId}
-          model={selectedModel}
-        />
-      ) : (
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#f9f9f9',
-          color: '#999'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ marginBottom: '0.5rem' }}>请在上方选择 Agent、输入用户ID后开始对话</p>
-          </div>
-        </div>
-      )}
-    </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>模型:</span>
+                <Select
+                  value={selectedModel}
+                  onChange={setSelectedModel}
+                  style={{ width: 200 }}
+                  options={models.map(m => ({ value: m.id, label: `${m.name} (${m.provider})` }))}
+                />
+              </div>
+
+              <Button onClick={handleReset} disabled={!selectedAgent}>
+                清除对话
+              </Button>
+            </div>
+
+            {isConfigValid ? (
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <AgentChat
+                  agentId={selectedAgent}
+                  threadId={threadId}
+                  userId={userId}
+                  model={selectedModel}
+                />
+              </div>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
+                请选择 Agent、输入用户ID后开始对话
+              </div>
+            )}
+          </Content>
+        </Layout>
+      </Layout>
+    </ConfigProvider>
   );
 }

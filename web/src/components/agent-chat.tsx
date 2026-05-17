@@ -1,12 +1,15 @@
 'use client';
 
 /**
- * AgentChat组件
- * AG-UI对话组件，负责显示消息和处理用户输入
+ * AgentChat组件 - 使用 Ant Design Vue
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { Input, Spin, Avatar } from 'antd';
+import { UserOutlined, RobotOutlined } from '@ant-design/icons';
 import { useAgentRun, useAgentChat } from '@/hooks/use-agent-run';
 import { useThreadHistory } from '@/hooks/use-thread-history';
+
+const { TextArea } = Input;
 
 interface AgentChatProps {
   agentId: string;
@@ -15,25 +18,10 @@ interface AgentChatProps {
   model?: string;
 }
 
-/**
- * AgentChat组件
- * @param agentId - Agent ID
- * @param threadId - 线程 ID
- * @param userId - 用户 ID
- */
 export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) {
-  const {
-    messages,
-    input,
-    setInput,
-    setMessages,
-    addUserMessage,
-    addAssistantMessage,
-  } = useAgentChat();
-
+  const { messages, input, setInput, setMessages, addUserMessage } = useAgentChat();
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Auto-scroll ref and function
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = useCallback(() => {
@@ -47,7 +35,6 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     isLoading: isLoadingHistory,
   } = useThreadHistory(threadId, userId);
 
-  // 将 history chats 转为扁平消息列表
   const historyMessages = historyChats.flatMap((chat) =>
     chat.messages.map((msg) => ({
       id: msg.id,
@@ -56,17 +43,14 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     }))
   );
 
-  // 合并历史消息和当前消息
   const allMessages = [...historyMessages, ...messages];
 
-  // Auto-scroll to bottom when new messages arrive or history loads
   useEffect(() => {
     if (!isLoadingHistory) {
       scrollToBottom();
     }
   }, [historyChats, isLoadingHistory, scrollToBottom]);
 
-  // 初始加载历史消息
   useEffect(() => {
     if (threadId && userId) {
       loadMore();
@@ -74,55 +58,33 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threadId, userId]);
 
-  // SSE事件处理
   const handleSSEEvent = useCallback((event: any) => {
-    console.log('AG-UI Event:', event.type, event.data);
-
     switch (event.type) {
       case 'TEXT_MESSAGE_START':
-        console.log('TEXT_MESSAGE_START received, messageId:', event.data?.messageId);
         break;
 
       case 'TEXT_MESSAGE_CONTENT':
-        console.log('TEXT_MESSAGE_CONTENT received, content:', event.data?.content);
-        // 累积文本内容
         setMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
-          // 如果最后一条是正在生成的助手消息(temp_开头)，则追加
           if (lastMsg?.role === 'assistant' && lastMsg.id.startsWith('temp_')) {
             return [
               ...prev.slice(0, -1),
-              {
-                ...lastMsg,
-                content: (lastMsg.content as string) + event.data.content,
-              },
+              { ...lastMsg, content: (lastMsg.content as string) + event.data.content },
             ];
           } else {
-            // 创建新消息
             return [
               ...prev,
-              {
-                id: 'temp_' + Date.now(),
-                role: 'assistant' as const,
-                content: event.data.content,
-              },
+              { id: 'temp_' + Date.now(), role: 'assistant' as const, content: event.data.content },
             ];
           }
         });
         break;
 
       case 'TEXT_MESSAGE_END':
-        // 消息结束，生成完成 - 替换temp_ id为正式id
         setMessages((prev) => {
           const lastMsg = prev[prev.length - 1];
           if (lastMsg?.role === 'assistant' && lastMsg.id.startsWith('temp_')) {
-            return [
-              ...prev.slice(0, -1),
-              {
-                ...lastMsg,
-                id: crypto.randomUUID(),
-              },
-            ];
+            return [...prev.slice(0, -1), { ...lastMsg, id: crypto.randomUUID() }];
           }
           return prev;
         });
@@ -130,46 +92,26 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
         break;
 
       case 'RUN_STARTED':
-        // Agent开始运行
         setIsGenerating(true);
         break;
 
       case 'RUN_FINISHED':
-        // Agent运行完成
         setIsGenerating(false);
         break;
 
       case 'RUN_ERROR':
-        // 运行出错
-        console.error('Agent run error:', event.data.error);
         setIsGenerating(false);
         alert('Error: ' + event.data.error);
         break;
 
-      case 'TOOL_CALL_START':
-        // 工具调用开始
-        console.log('Tool call started:', event.data.toolName);
-        break;
-
-      case 'TOOL_CALL_ARGS':
-        // 工具参数
-        console.log('Tool args:', event.data.args);
-        break;
-
-      case 'TOOL_CALL_END':
-        // 工具调用结束
-        console.log('Tool call ended:', event.data.toolCallId);
-        break;
-
       default:
-        console.log('Unknown event type:', event.type);
+        break;
     }
   }, [setMessages]);
 
   const handleScroll = useCallback(
     (e: React.UIEvent<HTMLDivElement>) => {
       const target = e.target as HTMLDivElement;
-      // 滚动到顶部时加载更多
       if (target.scrollTop === 0 && hasMore && !isLoadingHistory) {
         loadMore();
       }
@@ -177,79 +119,41 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
     [hasMore, isLoadingHistory, loadMore]
   );
 
-  const { runAgent } = useAgentRun({
-    agentId,
-    threadId,
-    userId,
-    onMessage: handleSSEEvent,
-  });
+  const { runAgent } = useAgentRun({ agentId, threadId, userId, onMessage: handleSSEEvent });
 
-  /**
-   * 提交处理
-   */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!input.trim() || isGenerating) {
-      return;
-    }
+  const handleSubmit = async () => {
+    if (!input.trim() || isGenerating) return;
 
     const userInput = input.trim();
     const userMsgId = crypto.randomUUID();
-
-    // 先添加到本地消息列表
     addUserMessage(userInput);
 
-    // 调用Agent，包含当前用户输入
     await runAgent({
       messages: [
-        ...allMessages.map((m) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-        })),
-        {
-          id: userMsgId,
-          role: 'user' as const,
-          content: userInput,
-        },
+        ...allMessages.map((m) => ({ id: m.id, role: m.role, content: m.content })),
+        { id: userMsgId, role: 'user' as const, content: userInput },
       ],
       tools: [],
       context: [],
-      forwardedProps: {
-        agentId,
-        userId,
-        model,
-      },
+      forwardedProps: { agentId, userId, model },
     });
   };
 
   return (
-    <div style={{
-      flex: 1,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      background: '#f9f9f9'
-    }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#f5f5f5' }}>
       {/* 消息列表 */}
-      <div style={{
-        flex: 1,
-        overflow: 'auto',
-        padding: '1rem',
-      }} onScroll={handleScroll}>
+      <div
+        style={{ flex: 1, overflow: 'auto', padding: '24px' }}
+        onScroll={handleScroll}
+      >
         {isLoadingHistory && (
-          <div style={{ textAlign: 'center', padding: '0.5rem', color: '#999' }}>
-            加载更多...
+          <div style={{ textAlign: 'center', padding: '16px' }}>
+            <Spin tip="加载更多..." />
           </div>
         )}
 
-        {messages.length === 0 && (
-          <div style={{
-            textAlign: 'center',
-            color: '#999',
-            marginTop: '2rem'
-          }}>
+        {allMessages.length === 0 && (
+          <div style={{ textAlign: 'center', color: '#999', marginTop: '100px' }}>
             开始对话吧！
           </div>
         )}
@@ -258,46 +162,37 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
           <div
             key={msg.id || index}
             style={{
-              marginBottom: '1rem',
+              marginBottom: '16px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
             }}
           >
-            <div style={{
-              maxWidth: '80%',
-              padding: '0.75rem 1rem',
-              borderRadius: '12px',
-              background: msg.role === 'user' ? '#007AFF' : '#fff',
-              color: msg.role === 'user' ? '#fff' : '#333',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-            }}>
-              {String(msg.content)}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', maxWidth: '70%' }}>
+              {msg.role !== 'user' && <Avatar icon={<RobotOutlined />} style={{ background: '#1890ff' }} />}
+              <div
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                  background: msg.role === 'user' ? '#1890ff' : '#fff',
+                  color: msg.role === 'user' ? '#fff' : '#333',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}
+              >
+                {String(msg.content)}
+              </div>
+              {msg.role === 'user' && <Avatar icon={<UserOutlined />} style={{ background: '#52c41a' }} />}
             </div>
-            <span style={{
-              fontSize: '0.75rem',
-              color: '#999',
-              marginTop: '0.25rem',
-            }}>
-              {msg.role === 'user' ? '你' : '助手'}
-            </span>
           </div>
         ))}
 
         {isGenerating && (
-          <div style={{
-            marginBottom: '1rem',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'flex-start',
-          }}>
-            <div style={{
-              padding: '0.75rem 1rem',
-              borderRadius: '12px',
-              background: '#fff',
-              color: '#666',
-            }}>
-              正在思考...
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '16px' }}>
+            <Avatar icon={<RobotOutlined />} style={{ background: '#1890ff' }} />
+            <div style={{ padding: '12px 16px', borderRadius: '16px', background: '#fff' }}>
+              <Spin size="small" tip="正在思考..." />
             </div>
           </div>
         )}
@@ -306,58 +201,22 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
       </div>
 
       {/* 输入框 */}
-      <form
-        onSubmit={handleSubmit}
-        style={{
-          padding: '1rem',
-          background: '#fff',
-          borderTop: '1px solid #e5e5e5',
-        }}
-      >
-        <div style={{
-          display: 'flex',
-          gap: '0.5rem',
-          maxWidth: '800px',
-          margin: '0 auto',
-        }}>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="输入消息..."
-            disabled={isGenerating}
-            style={{
-              flex: 1,
-              padding: '0.75rem 1rem',
-              border: '1px solid #e5e5e5',
-              borderRadius: '24px',
-              outline: 'none',
-              fontSize: '1rem',
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || isGenerating}
-            style={{
-              padding: '0.75rem 1.5rem',
-              border: 'none',
-              borderRadius: '24px',
-              background: isGenerating ? '#ccc' : '#007AFF',
-              color: '#fff',
-              fontSize: '1rem',
-              cursor: isGenerating ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {isGenerating ? '发送中...' : '发送'}
-          </button>
-        </div>
-      </form>
+      <div style={{ padding: '16px 24px', background: '#fff', borderTop: '1px solid #f0f0f0' }}>
+        <TextArea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="输入消息..."
+          disabled={isGenerating}
+          autoSize={{ minRows: 1, maxRows: 4 }}
+          onPressEnter={(e) => {
+            if (!e.shiftKey) {
+              e.preventDefault();
+              handleSubmit();
+            }
+          }}
+          style={{ borderRadius: '8px' }}
+        />
+      </div>
     </div>
   );
 }

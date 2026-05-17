@@ -232,7 +232,7 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
           </div>
         )}
 
-        {messages.map((msg, index) => (
+        {allMessages.map((msg, index) => (
           <div
             key={msg.id || index}
             style={{

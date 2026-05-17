@@ -4,7 +4,7 @@
  * AgentChat组件
  * AG-UI对话组件，负责显示消息和处理用户输入
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAgentRun, useAgentChat } from '@/hooks/use-agent-run';
 import { useThreadHistory } from '@/hooks/use-thread-history';
 
@@ -33,6 +33,13 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
 
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Auto-scroll ref and function
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
   const {
     chats: historyChats,
     loadMore,
@@ -51,6 +58,13 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
 
   // 合并历史消息和当前消息
   const allMessages = [...historyMessages, ...messages];
+
+  // Auto-scroll to bottom when new messages arrive (but not during history load)
+  useEffect(() => {
+    if (!isLoadingHistory && messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages, isLoadingHistory, scrollToBottom]);
 
   // SSE事件处理
   const handleSSEEvent = useCallback((event: any) => {
@@ -279,6 +293,8 @@ export function AgentChat({ agentId, threadId, userId, model }: AgentChatProps) 
             </div>
           </div>
         )}
+
+        <div ref={messagesEndRef} />
       </div>
 
       {/* 输入框 */}

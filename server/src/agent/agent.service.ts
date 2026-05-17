@@ -6,6 +6,7 @@ import { ShortTermMemoryService } from './memory/short-term-memory.service';
 import { LongTermMemoryService } from './memory/long-term-memory.service';
 import { AgentPromptService } from './prompt/agent-prompt.service';
 import { RunAgentInputDto } from './dto/run-agent-input.dto';
+import { GetChatsQueryDto } from './dto/get-chats-query.dto';
 import { Agent } from './types/agent.types';
 import { ChatOpenAI } from '@langchain/openai';
 
@@ -41,6 +42,126 @@ export class AgentService {
         observer.complete();
       });
     });
+  }
+
+  /**
+   * 获取线程下的聊天历史
+   * @param query - GetChatsQueryDto
+   * @returns 嵌套结构的聊天数据
+   */
+  async getChats(query: GetChatsQueryDto) {
+    const { threadId, beforeMessageId, limit = 20 } = query;
+
+    // 1. 查找线程
+    const thread = await this.prisma.agentThread.findFirst({
+      where: { uuid: threadId },
+    });
+
+    if (!thread) {
+      throw new NotFoundException(`Thread not found: ${threadId}`);
+    }
+
+    // 2. 构建查询条件
+    const whereCondition: any = {
+      thread_id: thread.id,
+    };
+
+    // 如果有 cursor，只返回该消息之前的 Chats
+    if (beforeMessageId) {
+      const cursorMessage = await this.prisma.agentMessage.findFirst({
+        where: { id: BigInt(beforeMessageId) },
+        include: { chat: true },
+      });
+
+      if (!cursorMessage) {
+        return { data: [], pagination: { hasMore: false, nextCursor: null } };
+      }
+
+      // 找到该消息所在 Chat 的 createdAt，使用它作为时间点
+      const cursorChat = await this.prisma.agentChat.findFirst({
+        where: {
+          thread_id: thread.id,
+          created_at: { lt: cursorMessage.chat.created_at },
+        },
+        orderBy: { created_at: 'desc' },
+      });
+
+      if (!cursorChat) {
+        return { data: [], pagination: { hasMore: false, nextCursor: null } };
+      }
+
+      // 找到 cursor 时间点之后的第一条 Chat 的最早消息作为 nextCursor 基准
+      const nextCursorChat = await this.prisma.agentChat.findFirst({
+        where: {
+          thread_id: thread.id,
+          created_at: { gt: cursorChat.created_at },
+        },
+        orderBy: { created_at: 'asc' },
+      });
+
+      if (nextCursorChat) {
+        const firstMessage = await this.prisma.agentMessage.findFirst({
+          where: { chat_id: nextCursorChat.id },
+          orderBy: { created_at: 'asc' },
+        });
+        if (firstMessage) {
+          whereCondition.created_at = { gt: cursorChat.created_at };
+        }
+      } else {
+        whereCondition.created_at = { gt: cursorChat.created_at };
+      }
+    }
+
+    // 3. 查询 Chats（多取一条用于判断 hasMore）
+    const chats = await this.prisma.agentChat.findMany({
+      where: whereCondition,
+      orderBy: { created_at: 'asc' },
+      take: limit + 1,
+      include: {
+        messages: {
+          orderBy: { created_at: 'asc' },
+        },
+      },
+    });
+
+    // 4. 判断是否有更多
+    const hasMore = chats.length > limit;
+    if (hasMore) {
+      chats.pop(); // 移除多取的那条
+    }
+
+    // 5. 构造响应
+    const data = chats.map((chat) => ({
+      id: chat.id.toString(),
+      createdAt: new Date(Number(chat.created_at)).toISOString(),
+      rating: chat.rating,
+      feedback: chat.feedback,
+      tokenUsage: chat.token_usage,
+      messages: chat.messages.map((msg) => ({
+        id: msg.id.toString(),
+        role: msg.role,
+        content: JSON.parse(msg.content),
+        toolCallId: null,
+        createdAt: new Date(Number(msg.created_at)).toISOString(),
+      })),
+    }));
+
+    // 6. 计算 nextCursor（最老一条 Chat 的第一条消息 ID）
+    let nextCursor: string | null = null;
+    if (hasMore && chats.length > 0) {
+      const oldestChat = chats[0];
+      if (oldestChat.messages.length > 0) {
+        nextCursor = oldestChat.messages[0].id.toString();
+      }
+    }
+
+    return {
+      data,
+      pagination: {
+        hasMore,
+        nextCursor,
+      },
+    };
   }
 
   /**

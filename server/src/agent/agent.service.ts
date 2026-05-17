@@ -130,7 +130,8 @@ export class AgentService {
 
     // 6. 计算 nextCursor（最老一条 Chat 的第一条消息 ID）
     let nextCursor: string | null = null;
-    if (hasMore && chats.length > 0) {
+    let effectiveHasMore = hasMore;
+    if (effectiveHasMore && chats.length > 0) {
       // 找到最老的有消息的 chat
       for (const chat of chats) {
         if (chat.messages.length > 0) {
@@ -138,16 +139,16 @@ export class AgentService {
           break;
         }
       }
-      // 如果所有 chat 都没有消息，hasMore 应该是 false
+      // 如果所有 chat 都没有消息，effectiveHasMore 应该是 false
       if (!nextCursor) {
-        hasMore = false;
+        effectiveHasMore = false;
       }
     }
 
     return {
       data,
       pagination: {
-        hasMore,
+        hasMore: effectiveHasMore,
         nextCursor,
       },
     };

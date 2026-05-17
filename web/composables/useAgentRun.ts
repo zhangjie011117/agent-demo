@@ -1,16 +1,5 @@
 import { HttpAgent } from '@ag-ui/client'
 import type { AgentMessage } from '~/types'
-import type {
-  RunStartedEvent,
-  TextMessageContentEvent,
-  TextMessageEndEvent,
-  TextMessageStartEvent,
-  RunFinishedEvent,
-  RunErrorEvent,
-  ToolCallStartEvent,
-  ToolCallArgsEvent,
-  ToolCallEndEvent,
-} from '@ag-ui/core'
 
 interface AgentEvent {
   type: string
@@ -36,39 +25,26 @@ export const useAgentRun = ({ agentId, threadId, userId, onMessage }: UseAgentRu
 
   const config = useRuntimeConfig()
   const apiUrl = config.public.agentApiUrl as string
-
   const agent = new HttpAgent({
     url: `${apiUrl}/agent/run`,
+    threadId,
     headers: {
       'Content-Type': 'application/json'
     }
-  })
-
-  // Middleware to intercept and forward events
-  agent.use((input, next) => {
-    return next.run({
-      ...input,
-      onEvent: (event: any) => {
-        // Forward events to callback
-        onMessage?.({
-          type: event.type,
-          data: event
-        })
-      }
-    })
   })
 
   const runAgent = async (input: RunAgentInput) => {
     isStreaming.value = true
 
     try {
-      const result = await agent.runAgent({
-        threadId,
-        runId: crypto.randomUUID(),
-        messages: input.messages.map(m => ({
+      agent.setMessages(input.messages.map(m => ({
+          id: m.id,
           role: m.role,
           content: typeof m.content === 'string' ? m.content : String(m.content)
-        })),
+      })) as any)
+
+      const result = await agent.runAgent({
+        runId: crypto.randomUUID(),
         tools: input.tools,
         context: input.context,
         forwardedProps: {
@@ -76,12 +52,14 @@ export const useAgentRun = ({ agentId, threadId, userId, onMessage }: UseAgentRu
           agentId,
           userId
         }
-      })
-
-      // Process result if needed
-      if (result.newMessages) {
-        // Handle new messages from the response
-      }
+      }, {
+        onRunStartedEvent: ({ event }: any) => onMessage?.(event),
+        onTextMessageStartEvent: ({ event }: any) => onMessage?.(event),
+        onTextMessageContentEvent: ({ event }: any) => onMessage?.(event),
+        onTextMessageEndEvent: ({ event }: any) => onMessage?.(event),
+        onRunFinishedEvent: ({ event }: any) => onMessage?.(event),
+        onRunErrorEvent: ({ event }: any) => onMessage?.(event),
+      } as any)
 
       return result
     } catch (error: any) {
@@ -97,8 +75,7 @@ export const useAgentRun = ({ agentId, threadId, userId, onMessage }: UseAgentRu
   }
 
   const cancel = () => {
-    // HttpAgent doesn't have a built-in cancel method
-    // The request will be aborted when the component unmounts
+    // Streaming cancellation can be added here if the UI exposes a stop action.
   }
 
   return { runAgent, isStreaming, cancel }
@@ -108,9 +85,9 @@ export const useAgentChat = () => {
   const messages = ref<AgentMessage[]>([])
   const input = ref('')
 
-  const addUserMessage = (content: string) => {
+  const addUserMessage = (content: string, id: string = crypto.randomUUID()) => {
     const userMessage: AgentMessage = {
-      id: crypto.randomUUID(),
+      id,
       role: 'user',
       content
     }
@@ -131,9 +108,14 @@ export const useAgentChat = () => {
     messages.value = []
   }
 
+  const setMessages = (updater: AgentMessage[] | ((messages: AgentMessage[]) => AgentMessage[])) => {
+    messages.value = typeof updater === 'function' ? updater(messages.value) : updater
+  }
+
   return {
     messages,
     input,
+    setMessages,
     addUserMessage,
     addAssistantMessage,
     clearMessages

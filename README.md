@@ -48,15 +48,12 @@ pnpm install
 **server/.env**
 ```env
 DATABASE_URL="mysql://root:password@localhost:3306/agent_service"
-DEEPSEEK_API_KEY="your-api-key"
-DEEPSEEK_MODEL="deepseek-v4-flash"
-DEEPSEEK_BASE_URL="https://api.deepseek.com"
-PORT=3000
+PORT=3001
 ```
 
 **web/.env** (如需要)
 ```env
-NUXT_PUBLIC_AGENT_API_URL=http://localhost:3000
+NUXT_PUBLIC_AGENT_API_URL=http://localhost:3001
 ```
 
 ### 3. 数据库初始化 (仅首次)
@@ -79,6 +76,8 @@ pnpm run dev
 cd web
 pnpm run dev
 ```
+
+默认情况下，后端服务运行在 http://localhost:3001，前端服务运行在 http://localhost:3000。
 
 访问 http://localhost:3000 查看前端界面。
 

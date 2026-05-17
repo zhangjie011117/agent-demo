@@ -27,12 +27,6 @@ export interface AgentOption {
   name: string
 }
 
-export interface ModelOption {
-  id: string
-  name: string
-  provider: string
-}
-
 export interface AgentMessage {
   id: string
   role: 'user' | 'assistant' | 'system' | 'tool'

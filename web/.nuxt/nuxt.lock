@@ -1,9 +1,0 @@
-{
-  "pid": 20518,
-  "startedAt": 1779015560308,
-  "command": "dev",
-  "cwd": "/private/var/www/agent-demo/web",
-  "port": 3000,
-  "hostname": "::1",
-  "url": "http://[::1]:3000"
-}

@@ -1,8 +1,10 @@
 import {
   Controller,
+  Delete,
   Get,
   Post,
   Body,
+  Param,
   Query,
   Res,
   HttpCode,
@@ -14,6 +16,7 @@ import { AgentService } from './agent.service';
 import { RunAgentInputDto } from './dto/run-agent-input.dto';
 import { GetChatsQueryDto } from './dto/get-chats-query.dto';
 import { GetThreadsQueryDto } from './dto/get-threads-query.dto';
+import { CreateThreadDto } from './dto/create-thread.dto';
 
 /**
  * Agent控制器
@@ -53,7 +56,7 @@ export class AgentController {
       },
       error: (error) => {
         this.logger.error(`SSE error: ${error.message}`, error.stack);
-        res.write(`data: ${JSON.stringify({ type: 'RUN_ERROR', data: { error: error.message } })}\n\n`);
+        res.write(`data: ${JSON.stringify({ type: 'RUN_ERROR', message: error.message })}\n\n`);
         res.end();
       },
       complete: () => {
@@ -87,5 +90,28 @@ export class AgentController {
   async getThreads(@Query() query: GetThreadsQueryDto) {
     this.logger.log(`Getting threads for user: ${query.userId}`);
     return this.agentService.getThreads(query);
+  }
+
+  /**
+   * POST /agent/threads
+   * 创建一个空会话
+   */
+  @Post('threads')
+  async createThread(@Body() body: CreateThreadDto) {
+    this.logger.log(`Creating thread for user: ${body.userId}, agent: ${body.agentId}`);
+    return this.agentService.createThread(body);
+  }
+
+  /**
+   * DELETE /agent/threads/:threadId
+   * 删除用户的指定会话及其消息
+   */
+  @Delete('threads/:threadId')
+  async deleteThread(
+    @Param('threadId') threadId: string,
+    @Query() query: GetThreadsQueryDto,
+  ) {
+    this.logger.log(`Deleting thread: ${threadId} for user: ${query.userId}`);
+    return this.agentService.deleteThread({ threadId, userId: query.userId });
   }
 }

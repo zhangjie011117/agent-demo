@@ -16,7 +16,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      agentApiUrl: process.env.NUXT_PUBLIC_AGENT_API_URL || 'http://localhost:3000'
+      agentApiUrl: process.env.NUXT_PUBLIC_AGENT_API_URL || 'http://localhost:3001'
     }
   },
 })

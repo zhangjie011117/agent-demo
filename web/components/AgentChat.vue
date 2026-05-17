@@ -3,17 +3,11 @@ interface Props {
   agentId: string
   threadId: string
   userId: string
-  model?: string
 }
 
 const props = defineProps<Props>()
 
 const { messages, input, setMessages, addUserMessage } = useAgentChat()
-const { runAgent } = useAgentRun({
-  agentId: props.agentId,
-  threadId: props.threadId,
-  userId: props.userId
-})
 
 const isGenerating = ref(false)
 const messagesEndRef = ref<HTMLElement | null>(null)
@@ -65,12 +59,12 @@ const handleSSEEvent = (event: any) => {
         if (lastMsg?.role === 'assistant' && lastMsg.id.startsWith('temp_')) {
           return [
             ...prev.slice(0, -1),
-            { ...lastMsg, content: (lastMsg.content as string) + event.data.content }
+            { ...lastMsg, content: (lastMsg.content as string) + event.delta }
           ]
         } else {
           return [
             ...prev,
-            { id: 'temp_' + Date.now(), role: 'assistant' as const, content: event.data.content }
+            { id: 'temp_' + Date.now(), role: 'assistant' as const, content: event.delta }
           ]
         }
       })
@@ -96,13 +90,20 @@ const handleSSEEvent = (event: any) => {
 
     case 'RUN_ERROR':
       isGenerating.value = false
-      console.error('Error:', event.data.error)
+      console.error('Error:', event.message)
       break
 
     default:
       break
   }
 }
+
+const { runAgent } = useAgentRun({
+  agentId: props.agentId,
+  threadId: props.threadId,
+  userId: props.userId,
+  onMessage: handleSSEEvent
+})
 
 const handleScroll = (e: Event) => {
   const target = e.target as HTMLElement
@@ -116,7 +117,7 @@ const handleSubmit = async () => {
 
   const userInput = input.value.trim()
   const userMsgId = crypto.randomUUID()
-  addUserMessage(userInput)
+  addUserMessage(userInput, userMsgId)
 
   await runAgent({
     messages: [
@@ -125,7 +126,7 @@ const handleSubmit = async () => {
     ],
     tools: [],
     context: [],
-    forwardedProps: { agentId: props.agentId, userId: props.userId, model: props.model }
+    forwardedProps: { agentId: props.agentId, userId: props.userId }
   })
 }
 
@@ -139,69 +140,68 @@ const handleKeydown = (e: KeyboardEvent) => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full bg-muted text-default">
-    <div class="flex-1 overflow-auto p-6" @scroll="handleScroll">
+  <div class="flex h-full flex-col bg-default text-default">
+    <div class="flex-1 overflow-auto px-4 py-8" @scroll="handleScroll">
       <div v-if="isLoadingHistory" class="text-center py-4 text-muted">
         加载更多...
       </div>
 
-      <div v-if="allMessages.length === 0" class="text-center text-muted mt-24">
-        开始对话吧！
-      </div>
+      <div class="mx-auto flex w-full max-w-3xl flex-col gap-6">
+        <div v-if="allMessages.length === 0" class="pt-28 text-center">
+          <div class="text-2xl font-semibold text-highlighted">开始对话吧</div>
+          <div class="mt-2 text-sm text-muted">输入消息后，助手会在这里回复。</div>
+        </div>
 
-      <div
-        v-for="(msg, index) in allMessages"
-        :key="msg.id || index"
-        class="mb-4 flex"
-        :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
-      >
-        <div class="flex items-start gap-2 max-w-2xl">
+        <div
+          v-for="(msg, index) in allMessages"
+          :key="msg.id || index"
+          class="flex w-full"
+          :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
+        >
           <div
-            v-if="msg.role !== 'user'"
-            class="w-9 h-9 rounded-full bg-primary text-inverted flex items-center justify-center text-sm flex-shrink-0"
-          >
-            AI
-          </div>
-          <div
-            class="px-4 py-3 shadow-sm whitespace-pre-wrap break-words"
+            class="whitespace-pre-wrap break-words text-sm leading-7"
             :class="msg.role === 'user'
-              ? 'bg-primary text-inverted rounded-2xl rounded-tr-sm'
-              : 'bg-default text-default border border-default rounded-2xl rounded-tl-sm'"
+              ? 'max-w-[78%] rounded-3xl bg-elevated px-5 py-2.5 text-default'
+              : 'w-full rounded-2xl border border-default bg-muted px-5 py-3 text-default shadow-sm'"
           >
             {{ String(msg.content) }}
           </div>
-          <div
-            v-if="msg.role === 'user'"
-            class="w-9 h-9 rounded-full bg-inverted text-inverted flex items-center justify-center text-sm flex-shrink-0"
-          >
-            我
-          </div>
         </div>
-      </div>
 
-      <div v-if="isGenerating" class="mb-4 flex justify-start">
-        <div class="flex items-start gap-2 max-w-2xl">
-          <div class="w-9 h-9 rounded-full bg-primary text-inverted flex items-center justify-center text-sm flex-shrink-0">
-            AI
-          </div>
-          <div class="px-4 py-3 bg-default border border-default rounded-2xl rounded-tl-sm shadow-sm">
+        <div v-if="isGenerating" class="flex justify-start">
+          <div class="w-full rounded-2xl border border-default bg-muted px-5 py-3 text-sm leading-7 shadow-sm">
             <span class="text-muted">正在思考...</span>
           </div>
         </div>
-      </div>
 
-      <div ref="messagesEndRef" />
+        <div ref="messagesEndRef" />
+      </div>
     </div>
 
-    <div class="p-4 bg-default border-t border-default">
-      <UTextarea
-        v-model="input"
-        placeholder="输入消息..."
-        :disabled="isGenerating"
-        :rows="1"
-        class="w-full"
-        @keydown="handleKeydown"
-      />
+    <div class="bg-default px-4 pb-5 pt-2">
+      <div class="mx-auto w-full max-w-3xl rounded-3xl border border-default bg-default p-3 shadow-sm">
+        <UTextarea
+          v-model="input"
+          placeholder="输入消息..."
+          :disabled="isGenerating"
+          :rows="2"
+          autoresize
+          variant="none"
+          class="w-full"
+          :ui="{ base: 'resize-none text-sm leading-6' }"
+          @keydown="handleKeydown"
+        />
+        <div class="mt-2 flex items-center justify-between">
+          <span class="text-xs text-muted">Enter 发送，Shift + Enter 换行</span>
+          <UButton
+            color="neutral"
+            :disabled="!input.trim() || isGenerating"
+            @click="handleSubmit"
+          >
+            发送
+          </UButton>
+        </div>
+      </div>
     </div>
   </div>
 </template>

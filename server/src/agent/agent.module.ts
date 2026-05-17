@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AgentController } from './agent.controller';
 import { AgentListController } from './agent-list.controller';
-import { ModelController } from './model.controller';
 import { AgentService } from './agent.service';
 import { AgUiSseService } from './ag-ui/ag-ui-sse.service';
 import { ShortTermMemoryService } from './memory/short-term-memory.service';
@@ -13,7 +12,7 @@ import { AgentPromptService } from './prompt/agent-prompt.service';
  * 核心AI Agent业务逻辑模块
  */
 @Module({
-  controllers: [AgentController, AgentListController, ModelController],
+  controllers: [AgentController, AgentListController],
   providers: [
     AgentService,
     AgUiSseService,

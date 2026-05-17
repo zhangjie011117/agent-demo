@@ -20,7 +20,7 @@ pnpm install
 Create a `.env` file:
 
 ```env
-NUXT_PUBLIC_AGENT_API_URL=http://localhost:3000
+NUXT_PUBLIC_AGENT_API_URL=http://localhost:3001
 ```
 
 ## Development
@@ -29,7 +29,7 @@ NUXT_PUBLIC_AGENT_API_URL=http://localhost:3000
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000). The default backend API URL is [http://localhost:3001](http://localhost:3001).
 
 ## Build
 

@@ -1,12 +1,13 @@
 import type { ThreadChat } from '~/types'
+import type { Ref } from 'vue'
 
 interface UseThreadHistoryResult {
-  chats: ThreadChat[]
+  chats: Ref<ThreadChat[]>
   loadMore: () => Promise<void>
-  hasMore: boolean
-  isLoading: boolean
+  hasMore: Ref<boolean>
+  isLoading: Ref<boolean>
   reset: () => void
-  error: Error | null
+  error: Ref<Error | null>
 }
 
 export const useThreadHistory = (

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { Observable, Observer } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { AgUiSseService } from './ag-ui/ag-ui-sse.service';
@@ -8,6 +8,7 @@ import { AgentPromptService } from './prompt/agent-prompt.service';
 import { RunAgentInputDto } from './dto/run-agent-input.dto';
 import { GetChatsQueryDto } from './dto/get-chats-query.dto';
 import { GetThreadsQueryDto } from './dto/get-threads-query.dto';
+import { CreateThreadDto } from './dto/create-thread.dto';
 import { ThreadItemDto } from './dto/thread-item.dto';
 import { Agent } from './types/agent.types';
 import { ChatOpenAI } from '@langchain/openai';
@@ -33,7 +34,7 @@ export class AgentService {
    * @param input - AG-UI RunAgentInput
    * @returns SSE事件流
    */
-  runStream(input: RunAgentInputDto): Observable<{ type: string; data: unknown }> {
+  runStream(input: RunAgentInputDto): Observable<Record<string, unknown>> {
     return new Observable((observer) => {
       this.executeRun(input, observer).catch((error) => {
         this.logger.error('Agent execution failed:', error);
@@ -208,19 +209,84 @@ export class AgentService {
   }
 
   /**
+   * 创建空会话
+   * @param body - 创建会话参数
+   * @returns 新创建的线程列表项
+   */
+  async createThread(body: CreateThreadDto): Promise<{ data: ThreadItemDto }> {
+    if (!/^\d+$/.test(body.agentId)) {
+      throw new BadRequestException('agentId must be a numeric string');
+    }
+
+    const agentId = BigInt(body.agentId);
+    const agent = await this.prisma.agent.findFirst({
+      where: { id: agentId, enabled: true },
+    });
+
+    if (!agent) {
+      throw new NotFoundException(`Agent not found: ${body.agentId}`);
+    }
+
+    const now = BigInt(Date.now());
+    const thread = await this.prisma.agentThread.create({
+      data: {
+        agent_id: agent.id,
+        user_id: body.userId,
+        uuid: crypto.randomUUID(),
+        created_at: now,
+        updated_at: now,
+      },
+    });
+
+    return {
+      data: {
+        threadId: thread.uuid,
+        name: thread.name || '新会话',
+        createdAt: new Date(Number(thread.created_at)).toISOString(),
+        agentId: thread.agent_id.toString(),
+      },
+    };
+  }
+
+  /**
+   * 删除用户指定会话及其消息
+   */
+  async deleteThread(query: { threadId: string; userId: string }): Promise<{ data: { threadId: string } }> {
+    const thread = await this.prisma.agentThread.findFirst({
+      where: { uuid: query.threadId, user_id: query.userId },
+    });
+
+    if (!thread) {
+      throw new NotFoundException(`Thread not found: ${query.threadId}`);
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.agentMessage.deleteMany({
+        where: { thread_id: thread.id },
+      });
+      await tx.agentChat.deleteMany({
+        where: { thread_id: thread.id },
+      });
+      await tx.agentThread.delete({
+        where: { id: thread.id },
+      });
+    });
+
+    return { data: { threadId: query.threadId } };
+  }
+
+  /**
    * 执行Agent运行的主要逻辑
    */
   private async executeRun(
     input: RunAgentInputDto,
-    observer: Observer<{ type: string; data: unknown }>,
+    observer: Observer<Record<string, unknown>>,
   ): Promise<void> {
     const { threadId, runId, messages, context, forwardedProps } = input;
 
     // 从forwardedProps获取userId
     const userId = forwardedProps.userId || 'anonymous';
     const agentIdStr = forwardedProps.agentId;
-    const customModel = forwardedProps.model;
-
     this.logger.log(`Starting agent run: ${runId}, agentId: ${agentIdStr}, userId: ${userId}`);
 
     try {
@@ -355,13 +421,14 @@ export class AgentService {
       );
 
       // 8. 发送RUN_STARTED事件
-      observer.next({ type: 'RUN_STARTED', data: { runId } });
+      observer.next({ type: 'RUN_STARTED', threadId, runId, input });
 
       // 9. 调用LangChain
       const messageId = `msg_${Date.now()}`;
       observer.next({
         type: 'TEXT_MESSAGE_START',
-        data: { messageId, role: 'assistant' },
+        messageId,
+        role: 'assistant',
       });
 
       // 构建LangChain消息
@@ -377,7 +444,7 @@ export class AgentService {
 
       // 创建LLM实例
       const llmConfig: any = {
-        model: customModel || chatModel.model || 'deepseek-chat',
+        model: chatModel.model || 'deepseek-chat',
         apiKey: chatModel.api_key,
         streaming: true,
         temperature: 0.7,
@@ -409,7 +476,8 @@ export class AgentService {
             fullResponse += content;
             observer.next({
               type: 'TEXT_MESSAGE_CONTENT',
-              data: { content },
+              messageId,
+              delta: content,
             });
           }
         }
@@ -418,14 +486,14 @@ export class AgentService {
         // 如果LLM调用失败，发送错误
         observer.next({
           type: 'RUN_ERROR',
-          data: { error: `LLM调用失败: ${llmError?.message || String(llmError)}` },
+          message: `LLM调用失败: ${llmError?.message || String(llmError)}`,
         });
         observer.complete();
         return;
       }
 
       // 发送TEXT_MESSAGE_END
-      observer.next({ type: 'TEXT_MESSAGE_END', data: { messageId } });
+      observer.next({ type: 'TEXT_MESSAGE_END', messageId });
 
       // 10. 保存assistant message
       const now = BigInt(Date.now());
@@ -442,7 +510,7 @@ export class AgentService {
       });
 
       // 11. 发送RUN_FINISHED
-      observer.next({ type: 'RUN_FINISHED', data: { runId } });
+      observer.next({ type: 'RUN_FINISHED', threadId, runId });
 
       // 12. 触发长期记忆提取(异步)
       await this.longTermMemory.scheduleExtraction(
@@ -457,7 +525,7 @@ export class AgentService {
       this.logger.error(`Agent run error: ${error?.message || String(error)}`, error?.stack);
       observer.next({
         type: 'RUN_ERROR',
-        data: { error: error?.message || String(error) },
+        message: error?.message || String(error),
       });
       observer.complete();
     }

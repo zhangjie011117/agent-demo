@@ -4,6 +4,8 @@ web/node_modules/
 
 # Build outputs
 server/dist/
+web/.nuxt/
+web/.output/
 web/.next/
 web/out/
 

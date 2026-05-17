@@ -13,6 +13,7 @@ import { Response } from 'express';
 import { AgentService } from './agent.service';
 import { RunAgentInputDto } from './dto/run-agent-input.dto';
 import { GetChatsQueryDto } from './dto/get-chats-query.dto';
+import { GetThreadsQueryDto } from './dto/get-threads-query.dto';
 
 /**
  * Agent控制器
@@ -76,5 +77,15 @@ export class AgentController {
   async getChats(@Query() query: GetChatsQueryDto) {
     this.logger.log(`Getting chats for thread: ${query.threadId}`);
     return this.agentService.getChats(query);
+  }
+
+  /**
+   * GET /agent/threads
+   * 获取用户的所有线程列表
+   */
+  @Get('threads')
+  async getThreads(@Query() query: GetThreadsQueryDto) {
+    this.logger.log(`Getting threads for user: ${query.userId}`);
+    return this.agentService.getThreads(query);
   }
 }

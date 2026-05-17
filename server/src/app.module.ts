@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { AgentModule } from './agent/agent.module';
+import { AgentModule } from './agent/module';
 import { PrismaModule } from './prisma/prisma.module';
 
 /**

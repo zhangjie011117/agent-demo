@@ -1,12 +1,11 @@
 import 'reflect-metadata';
 import assert from 'node:assert/strict';
 import { BadRequestException } from '@nestjs/common';
-import { AgentService } from './agent.service';
+import { AgentService } from './service';
 
 const createService = (prisma: any) =>
   new AgentService(
     prisma,
-    {} as any,
     {} as any,
     {} as any,
     {} as any,
@@ -153,7 +152,6 @@ async function main() {
   await testDeleteThread();
 }
 
-main().catch((error) => {
-  console.error(error);
+main().catch(() => {
   process.exit(1);
 });

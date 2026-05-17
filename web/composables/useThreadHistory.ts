@@ -67,7 +67,6 @@ export const useThreadHistory = (
         nextCursor.value = result.pagination.nextCursor
       }
     } catch (err) {
-      console.error('Failed to load history:', err)
       error.value = err instanceof Error ? err : new Error('Failed to load history')
     } finally {
       isLoading.value = false

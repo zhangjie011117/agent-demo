@@ -1,16 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Observable, Observer } from 'rxjs';
-import { PrismaService } from '../prisma/prisma.service';
-import { AgUiSseService } from './ag-ui/ag-ui-sse.service';
-import { ShortTermMemoryService } from './memory/short-term-memory.service';
-import { LongTermMemoryService } from './memory/long-term-memory.service';
-import { AgentPromptService } from './prompt/agent-prompt.service';
-import { RunAgentInputDto } from './dto/run-agent-input.dto';
-import { GetChatsQueryDto } from './dto/get-chats-query.dto';
-import { GetThreadsQueryDto } from './dto/get-threads-query.dto';
-import { CreateThreadDto } from './dto/create-thread.dto';
-import { ThreadItemDto } from './dto/thread-item.dto';
-import { Agent } from './types/agent.types';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { ShortTermMemoryService } from '../support/memory/short-term-memory';
+import { LongTermMemoryService } from '../support/memory/long-term-memory';
+import { AgentPromptService } from '../support/prompt/agent-prompt';
+import { RunAgentInputDto } from '../../dto/run-agent-input.dto';
+import { GetChatsQueryDto } from '../../dto/get-chats-query.dto';
+import { GetThreadsQueryDto } from '../../dto/get-threads-query.dto';
+import { CreateThreadDto } from '../../dto/create-thread.dto';
+import { ThreadItemDto } from '../../dto/thread-item.dto';
+import { Agent } from '../../types/types';
 import { ChatOpenAI } from '@langchain/openai';
 
 /**
@@ -19,11 +18,8 @@ import { ChatOpenAI } from '@langchain/openai';
  */
 @Injectable()
 export class AgentService {
-  private readonly logger = new Logger(AgentService.name);
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly sseService: AgUiSseService,
     private readonly shortTermMemory: ShortTermMemoryService,
     private readonly longTermMemory: LongTermMemoryService,
     private readonly promptService: AgentPromptService,
@@ -37,7 +33,6 @@ export class AgentService {
   runStream(input: RunAgentInputDto): Observable<Record<string, unknown>> {
     return new Observable((observer) => {
       this.executeRun(input, observer).catch((error) => {
-        this.logger.error('Agent execution failed:', error);
         observer.next({
           type: 'RUN_ERROR',
           data: { error: error.message || 'Unknown error' },
@@ -287,7 +282,6 @@ export class AgentService {
     // 从forwardedProps获取userId
     const userId = forwardedProps.userId || 'anonymous';
     const agentIdStr = forwardedProps.agentId;
-    this.logger.log(`Starting agent run: ${runId}, agentId: ${agentIdStr}, userId: ${userId}`);
 
     try {
       // 1. 查询Agent (通过id字段)
@@ -324,7 +318,6 @@ export class AgentService {
             updated_at: now,
           },
         });
-        this.logger.log(`Created new thread: ${thread.id}`);
       }
 
       // 4. 判断续跑 (最后一条message role为tool)
@@ -359,7 +352,6 @@ export class AgentService {
               created_at: now,
             },
           });
-          this.logger.log(`Saved tool message to chat: ${currentChat.id}`);
         }
 
         // 从消息中提取用户输入(最后一条user消息)
@@ -398,8 +390,6 @@ export class AgentService {
             created_at: now,
           },
         });
-
-        this.logger.log(`Created new chat: ${currentChat.id}`);
       }
 
       if (!currentChat) {
@@ -482,7 +472,6 @@ export class AgentService {
           }
         }
       } catch (llmError: any) {
-        this.logger.error('LLM invocation failed:', llmError);
         // 如果LLM调用失败，发送错误
         observer.next({
           type: 'RUN_ERROR',
@@ -520,9 +509,7 @@ export class AgentService {
       );
 
       observer.complete();
-      this.logger.log(`Agent run completed: ${runId}`);
     } catch (error: any) {
-      this.logger.error(`Agent run error: ${error?.message || String(error)}`, error?.stack);
       observer.next({
         type: 'RUN_ERROR',
         message: error?.message || String(error),

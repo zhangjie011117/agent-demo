@@ -19,4 +19,13 @@ export default defineNuxtConfig({
       agentApiUrl: process.env.NUXT_PUBLIC_AGENT_API_URL || 'http://localhost:3001'
     }
   },
+
+  vite: {
+    build: {
+      sourcemap: false,
+    },
+    esbuild: {
+      drop: ['console', 'debugger'],
+    },
+  },
 })

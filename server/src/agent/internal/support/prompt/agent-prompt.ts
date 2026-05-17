@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Agent, ContextItem } from '../types/agent.types';
+import { Agent, ContextItem } from '../../../types/types';
 
 /**
  * Agent Prompt服务

@@ -62,8 +62,7 @@ onMounted(() => {
         selectedAgent.value = firstAgent.id
       }
     })
-    .catch((err) => {
-      console.error('Failed to fetch config:', err)
+    .catch(() => {
     })
 
   const storedUserId = localStorage.getItem('userId') || ''

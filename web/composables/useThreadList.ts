@@ -32,7 +32,6 @@ export const useThreadList = (userIdRef: Ref<string>): UseThreadListResult => {
       const result = await response.json()
       threads.value = result.data || []
     } catch (err) {
-      console.error('Failed to load threads:', err)
       error.value = err instanceof Error ? err : new Error(String(err))
     } finally {
       isLoading.value = false

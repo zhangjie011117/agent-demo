@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '../../../../prisma/prisma.service';
 
 /**
  * 长期记忆服务
@@ -143,19 +143,13 @@ ${formattedMessages.join('\n')}
 
 请直接输出总结，不要有多余的解释。`;
 
-      // TODO: 调用LLM进行总结
-      // 目前仅做占位，后续集成LangChain后实现
-      console.log('Memory extraction triggered for user:', userId);
-      console.log('Extraction prompt:', extractionPrompt);
-
       // 模拟提取结果
       const extractedMemory = `用户偏好: 喜欢简洁直接的回复。
 对话习惯: 通常在晚上活跃。
 目标: 寻求AI助手帮助完成日常任务。`;
 
       await this.saveMemory(agentId, userId, extractedMemory);
-    } catch (error) {
-      console.error('Memory extraction failed:', error);
+    } catch {
     }
   }
 }

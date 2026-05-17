@@ -90,7 +90,6 @@ const handleSSEEvent = (event: any) => {
 
     case 'RUN_ERROR':
       isGenerating.value = false
-      console.error('Error:', event.message)
       break
 
     default:

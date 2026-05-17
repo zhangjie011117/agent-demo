@@ -63,7 +63,6 @@ export const useAgentRun = ({ agentId, threadId, userId, onMessage }: UseAgentRu
 
       return result
     } catch (error: any) {
-      console.error('Agent run failed:', error)
       onMessage?.({
         type: 'RUN_ERROR',
         data: { error: error.message || 'Unknown error' }

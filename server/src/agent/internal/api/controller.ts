@@ -9,38 +9,58 @@ import {
   Res,
   HttpCode,
   HttpStatus,
-  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { AgentService } from './agent.service';
-import { RunAgentInputDto } from './dto/run-agent-input.dto';
-import { GetChatsQueryDto } from './dto/get-chats-query.dto';
-import { GetThreadsQueryDto } from './dto/get-threads-query.dto';
-import { CreateThreadDto } from './dto/create-thread.dto';
+import { AgentService } from '../service/service';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { RunAgentInputDto } from '../../dto/run-agent-input.dto';
+import { GetChatsQueryDto } from '../../dto/get-chats-query.dto';
+import { GetThreadsQueryDto } from '../../dto/get-threads-query.dto';
+import { CreateThreadDto } from '../../dto/create-thread.dto';
 
 /**
  * Agent控制器
  * 处理AG-UI协议的SSE流式接口
  */
-@Controller('agent')
+@Controller()
 export class AgentController {
-  private readonly logger = new Logger(AgentController.name);
+  constructor(
+    private readonly agentService: AgentService,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  constructor(private readonly agentService: AgentService) {}
+  /**
+   * GET /agents
+   * 获取所有启用的Agent列表
+   */
+  @Get('agents')
+  async getAgents() {
+    const agents = await this.prisma.agent.findMany({
+      where: { enabled: true },
+      select: {
+        id: true,
+        name: true,
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    return agents.map((agent) => ({
+      id: String(agent.id),
+      name: agent.name,
+    }));
+  }
 
   /**
    * POST /agent/run
    * AG-UI协议的Agent运行接口
    * 返回SSE流式响应
    */
-  @Post('run')
+  @Post('agent/run')
   @HttpCode(HttpStatus.OK)
   async runAgent(
     @Body() input: RunAgentInputDto,
     @Res() res: Response,
   ): Promise<void> {
-    this.logger.log(`Received agent run request: ${input.runId}`);
-
     // 设置SSE响应头
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
@@ -55,19 +75,16 @@ export class AgentController {
         res.write(`data: ${JSON.stringify(event)}\n\n`);
       },
       error: (error) => {
-        this.logger.error(`SSE error: ${error.message}`, error.stack);
         res.write(`data: ${JSON.stringify({ type: 'RUN_ERROR', message: error.message })}\n\n`);
         res.end();
       },
       complete: () => {
-        this.logger.log(`SSE stream completed for run: ${input.runId}`);
         res.end();
       },
     });
 
     // 处理客户端断开连接
     res.on('close', () => {
-      this.logger.log(`Client disconnected for run: ${input.runId}`);
       subscription.unsubscribe();
     });
   }
@@ -76,9 +93,8 @@ export class AgentController {
    * GET /agent/chats
    * 获取线程下的聊天历史（按 AgentChat 嵌套组织）
    */
-  @Get('chats')
+  @Get('agent/chats')
   async getChats(@Query() query: GetChatsQueryDto) {
-    this.logger.log(`Getting chats for thread: ${query.threadId}`);
     return this.agentService.getChats(query);
   }
 
@@ -86,9 +102,8 @@ export class AgentController {
    * GET /agent/threads
    * 获取用户的所有线程列表
    */
-  @Get('threads')
+  @Get('agent/threads')
   async getThreads(@Query() query: GetThreadsQueryDto) {
-    this.logger.log(`Getting threads for user: ${query.userId}`);
     return this.agentService.getThreads(query);
   }
 
@@ -96,9 +111,8 @@ export class AgentController {
    * POST /agent/threads
    * 创建一个空会话
    */
-  @Post('threads')
+  @Post('agent/threads')
   async createThread(@Body() body: CreateThreadDto) {
-    this.logger.log(`Creating thread for user: ${body.userId}, agent: ${body.agentId}`);
     return this.agentService.createThread(body);
   }
 
@@ -106,12 +120,11 @@ export class AgentController {
    * DELETE /agent/threads/:threadId
    * 删除用户的指定会话及其消息
    */
-  @Delete('threads/:threadId')
+  @Delete('agent/threads/:threadId')
   async deleteThread(
     @Param('threadId') threadId: string,
     @Query() query: GetThreadsQueryDto,
   ) {
-    this.logger.log(`Deleting thread: ${threadId} for user: ${query.userId}`);
     return this.agentService.deleteThread({ threadId, userId: query.userId });
   }
 }

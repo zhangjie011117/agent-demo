@@ -48,11 +48,11 @@ export class AgentService {
    * @returns 嵌套结构的聊天数据
    */
   async getChats(query: GetChatsQueryDto) {
-    const { threadId, userId, beforeMessageId, limit = 20 } = query;
+    const { threadId, beforeMessageId, limit = 20 } = query;
 
     // 1. 查找线程
     const thread = await this.prisma.agentThread.findFirst({
-      where: { uuid: threadId, user_id: userId },
+      where: { uuid: threadId },
     });
 
     if (!thread) {
@@ -246,9 +246,9 @@ export class AgentService {
   /**
    * 删除用户指定会话及其消息
    */
-  async deleteThread(query: { threadId: string; userId: string }): Promise<{ data: { threadId: string } }> {
+  async deleteThread(query: { threadId: string }): Promise<{ data: { threadId: string } }> {
     const thread = await this.prisma.agentThread.findFirst({
-      where: { uuid: query.threadId, user_id: query.userId },
+      where: { uuid: query.threadId },
     });
 
     if (!thread) {
@@ -277,11 +277,21 @@ export class AgentService {
     input: RunAgentInputDto,
     observer: Observer<Record<string, unknown>>,
   ): Promise<void> {
-    const { threadId, runId, messages, context, forwardedProps } = input;
+    const { threadId, runId, messages, context, forwardedProps, agentId: agentIdFromBody } = input;
 
-    // 从forwardedProps获取userId
-    const userId = forwardedProps.userId || 'anonymous';
-    const agentIdStr = forwardedProps.agentId;
+    // 从路径参数或forwardedProps获取userId
+    const userId = forwardedProps?.userId || 'anonymous';
+    // agentId从路径参数获取
+    const agentIdStr = agentIdFromBody as string;
+
+    if (!agentIdStr) {
+      observer.next({
+        type: 'RUN_ERROR',
+        message: 'agentId is required',
+      });
+      observer.complete();
+      return;
+    }
 
     try {
       // 1. 查询Agent (通过id字段)

@@ -26,7 +26,7 @@ export const useAgentRun = ({ agentId, threadId, userId, onMessage }: UseAgentRu
   const config = useRuntimeConfig()
   const apiUrl = config.public.agentApiUrl as string
   const agent = new HttpAgent({
-    url: `${apiUrl}/agent/run`,
+    url: `${apiUrl}/runAgent/${agentId}`,
     threadId,
     headers: {
       'Content-Type': 'application/json'
@@ -49,7 +49,6 @@ export const useAgentRun = ({ agentId, threadId, userId, onMessage }: UseAgentRu
         context: input.context,
         forwardedProps: {
           ...input.forwardedProps,
-          agentId,
           userId
         }
       }, {

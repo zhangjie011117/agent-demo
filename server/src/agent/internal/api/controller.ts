@@ -30,11 +30,11 @@ export class AgentController {
   ) {}
 
   /**
-   * GET /agents
+   * GET /listAgents
    * 获取所有启用的Agent列表
    */
-  @Get('agents')
-  async getAgents() {
+  @Get('listAgents')
+  async listAgents() {
     const agents = await this.prisma.agent.findMany({
       where: { enabled: true },
       select: {
@@ -51,13 +51,14 @@ export class AgentController {
   }
 
   /**
-   * POST /agent/run
+   * POST /runAgent/:agentId
    * AG-UI协议的Agent运行接口
    * 返回SSE流式响应
    */
-  @Post('agent/run')
+  @Post('runAgent/:agentId')
   @HttpCode(HttpStatus.OK)
   async runAgent(
+    @Param('agentId') agentId: string,
     @Body() input: RunAgentInputDto,
     @Res() res: Response,
   ): Promise<void> {
@@ -68,7 +69,7 @@ export class AgentController {
     res.setHeader('X-Accel-Buffering', 'no'); // 禁用nginx缓冲
 
     // 订阅SSE事件流
-    const subscription = this.agentService.runStream(input).subscribe({
+    const subscription = this.agentService.runStream({ ...input, agentId }).subscribe({
       next: (event) => {
         // 发送SSE格式数据: "data: {...}\n\n"
         // 包含type字段让前端识别事件类型
@@ -90,41 +91,41 @@ export class AgentController {
   }
 
   /**
-   * GET /agent/chats
+   * GET /getMessages/:threadId
    * 获取线程下的聊天历史（按 AgentChat 嵌套组织）
    */
-  @Get('agent/chats')
-  async getChats(@Query() query: GetChatsQueryDto) {
-    return this.agentService.getChats(query);
+  @Get('getMessages/:threadId')
+  async getChats(@Param('threadId') threadId: string) {
+    return this.agentService.getChats({ threadId });
   }
 
   /**
-   * GET /agent/threads
+   * GET /getThreads/:userId
    * 获取用户的所有线程列表
    */
-  @Get('agent/threads')
-  async getThreads(@Query() query: GetThreadsQueryDto) {
-    return this.agentService.getThreads(query);
+  @Get('getThreads/:userId')
+  async getThreads(@Param('userId') userId: string) {
+    return this.agentService.getThreads({ userId });
   }
 
   /**
-   * POST /agent/threads
+   * POST /createThread/:userId
    * 创建一个空会话
    */
-  @Post('agent/threads')
-  async createThread(@Body() body: CreateThreadDto) {
-    return this.agentService.createThread(body);
+  @Post('createThread/:userId')
+  async createThread(
+    @Param('userId') userId: string,
+    @Body() body: { agentId: string },
+  ) {
+    return this.agentService.createThread({ agentId: body.agentId, userId });
   }
 
   /**
-   * DELETE /agent/threads/:threadId
+   * DELETE /deleteThread/:threadId
    * 删除用户的指定会话及其消息
    */
-  @Delete('agent/threads/:threadId')
-  async deleteThread(
-    @Param('threadId') threadId: string,
-    @Query() query: GetThreadsQueryDto,
-  ) {
-    return this.agentService.deleteThread({ threadId, userId: query.userId });
+  @Delete('deleteThread/:threadId')
+  async deleteThread(@Param('threadId') threadId: string) {
+    return this.agentService.deleteThread({ threadId });
   }
 }

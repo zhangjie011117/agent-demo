@@ -125,7 +125,7 @@ const handleSubmit = async () => {
     ],
     tools: [],
     context: [],
-    forwardedProps: { agentId: props.agentId, userId: props.userId }
+    forwardedProps: { userId: props.userId }
   })
 }
 

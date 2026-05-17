@@ -53,12 +53,9 @@ export class ContextItemDto {
 
 /**
  * 转发属性
- * 包含agentId和userId等关键信息
+ * 包含userId等关键信息
  */
 export class ForwardedPropsDto {
-  @IsString()
-  agentId: string;
-
   @IsOptional()
   @IsString()
   userId?: string;
@@ -109,5 +106,8 @@ export class RunAgentInputDto {
   @IsObject()
   @ValidateNested()
   @Type(() => ForwardedPropsDto)
-  forwardedProps: ForwardedPropsDto;
+  forwardedProps?: ForwardedPropsDto;
+
+  // agentId 从路径参数传入，不再从 body 获取
+  agentId?: string;
 }

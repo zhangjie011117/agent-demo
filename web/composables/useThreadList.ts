@@ -27,7 +27,7 @@ export const useThreadList = (userIdRef: Ref<string>): UseThreadListResult => {
 
     isLoading.value = true
     try {
-      const response = await fetch(`${apiUrl}/agent/threads?userId=${encodeURIComponent(userIdRef.value)}`)
+      const response = await fetch(`${apiUrl}/getThreads/${encodeURIComponent(userIdRef.value)}`)
       if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
       const result = await response.json()
       threads.value = result.data || []
@@ -42,10 +42,10 @@ export const useThreadList = (userIdRef: Ref<string>): UseThreadListResult => {
     if (!userIdRef.value) throw new Error('Missing userId')
     error.value = null
 
-    const response = await fetch(`${apiUrl}/agent/threads`, {
+    const response = await fetch(`${apiUrl}/createThread/${encodeURIComponent(userIdRef.value)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agentId, userId: userIdRef.value })
+      body: JSON.stringify({ agentId })
     })
 
     if (!response.ok) throw new Error(`HTTP error: ${response.status}`)
@@ -60,7 +60,7 @@ export const useThreadList = (userIdRef: Ref<string>): UseThreadListResult => {
     error.value = null
 
     const response = await fetch(
-      `${apiUrl}/agent/threads/${encodeURIComponent(threadId)}?userId=${encodeURIComponent(userIdRef.value)}`,
+      `${apiUrl}/deleteThread/${encodeURIComponent(threadId)}`,
       { method: 'DELETE' }
     )
 

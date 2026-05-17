@@ -50,7 +50,7 @@ watch([selectedAgent, userId], async ([agent, uid]) => {
 })
 
 onMounted(() => {
-  fetch(`${apiUrl}/agents`)
+  fetch(`${apiUrl}/listAgents`)
     .then((res) => {
       if (!res.ok) throw new Error('Failed to fetch agents')
       return res.json()

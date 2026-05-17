@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsInt, Min, Max, IsNotEmpty } from 'class-validator';
+import { IsString, IsOptional, IsInt, Min, Max } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 /**
@@ -6,12 +6,7 @@ import { Transform } from 'class-transformer';
  */
 export class GetChatsQueryDto {
   @IsString()
-  @IsNotEmpty()
   threadId: string;
-
-  @IsString()
-  @IsNotEmpty()
-  userId: string;
 
   @IsOptional()
   @IsString()

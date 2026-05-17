@@ -44,7 +44,7 @@ export const useThreadHistory = (
         params.set('beforeMessageId', nextCursor.value)
       }
 
-      const response = await fetch(`${apiUrl}/agent/chats?${params}`, {
+      const response = await fetch(`${apiUrl}/getMessages/${threadId}`, {
         signal: abortController.value.signal
       })
 

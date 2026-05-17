@@ -53,6 +53,7 @@ export function useThreadHistory(
     try {
       const params = new URLSearchParams({
         threadId,
+        userId,
         limit: limit.toString(),
       });
 

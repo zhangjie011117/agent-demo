@@ -22,9 +22,7 @@ interface RunAgentInput {
 
 export const useAgentRun = ({ agentId, threadId, userId, onMessage }: UseAgentRunOptions) => {
   const isStreaming = ref(false)
-
-  const config = useRuntimeConfig()
-  const apiUrl = config.public.agentApiUrl as string
+  const apiUrl = '/api'
   const agent = new HttpAgent({
     url: `${apiUrl}/runAgent/${agentId}`,
     threadId,

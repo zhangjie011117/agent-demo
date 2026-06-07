@@ -14,10 +14,10 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  runtimeConfig: {
-    public: {
-      agentApiUrl: process.env.NUXT_PUBLIC_AGENT_API_URL || 'http://localhost:3001'
-    }
+  routeRules: {
+    '/api/**': {
+      proxy: 'http://localhost:3001/**',
+    },
   },
 
   vite: {

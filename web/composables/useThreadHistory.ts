@@ -22,9 +22,7 @@ export const useThreadHistory = (
   const error = ref<Error | null>(null)
   const resetFlagRef = ref(false)
   const abortController = ref<AbortController | null>(null)
-
-  const config = useRuntimeConfig()
-  const apiUrl = config.public.agentApiUrl as string
+  const apiUrl = '/api'
 
   const loadMore = async () => {
     if (isLoading.value || !hasMore.value) return

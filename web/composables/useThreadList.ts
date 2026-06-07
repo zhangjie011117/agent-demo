@@ -14,9 +14,7 @@ export const useThreadList = (userIdRef: Ref<string>): UseThreadListResult => {
   const threads = ref<ThreadItem[]>([])
   const isLoading = ref(false)
   const error = ref<Error | null>(null)
-
-  const config = useRuntimeConfig()
-  const apiUrl = config.public.agentApiUrl as string
+  const apiUrl = '/api'
 
   const loadThreads = async () => {
     if (!userIdRef.value) {

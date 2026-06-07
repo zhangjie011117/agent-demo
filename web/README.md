@@ -17,11 +17,7 @@ pnpm install
 
 ## Environment Variables
 
-Create a `.env` file:
-
-```env
-NUXT_PUBLIC_AGENT_API_URL=http://localhost:3001
-```
+No frontend API URL is required. The browser calls same-origin `/api/**` paths.
 
 ## Development
 
@@ -29,7 +25,9 @@ NUXT_PUBLIC_AGENT_API_URL=http://localhost:3001
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The default backend API URL is [http://localhost:3001](http://localhost:3001).
+Open [http://localhost:3000](http://localhost:3000). In development, Nuxt proxies `/api/**` to [http://localhost:3001](http://localhost:3001) and strips the `/api` prefix before forwarding to the backend.
+
+In production, configure your gateway or hosting platform so `/api/**` points to the backend service with the same `/api` prefix stripping behavior.
 
 ## Build
 

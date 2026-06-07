@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import type { AgentOption } from '~/types'
 
-const config = useRuntimeConfig()
-const apiUrl = config.public.agentApiUrl as string
+const apiUrl = '/api'
 
 const agents = ref<AgentOption[]>([])
 const selectedAgent = ref('')

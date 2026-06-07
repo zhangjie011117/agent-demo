@@ -118,10 +118,7 @@ DATABASE_URL="mysql://root:password@localhost:3306/agent_service"
 PORT=3001
 ```
 
-**web/.env** (可选)
-```env
-NUXT_PUBLIC_AGENT_API_URL=http://localhost:3001
-```
+前端不需要配置 API URL。浏览器统一请求同源 `/api/**`，开发环境由 Nuxt 自动代理到 `http://localhost:3001/**`，并在转发给后端时去掉 `/api` 前缀。生产环境需要在网关或部署平台配置同样的 `/api/**` 代理和前缀去除规则。
 
 ### 3. 数据库初始化
 
@@ -144,7 +141,7 @@ cd web
 pnpm run dev
 ```
 
-后端服务运行在 http://localhost:3001，前端服务运行在 http://localhost:3000。
+后端服务运行在 http://localhost:3001，前端服务运行在 http://localhost:3000。前端页面中的 API 请求会访问 http://localhost:3000/api/...，再由 Nuxt 代理到后端根路径接口。
 
 访问 http://localhost:3000 查看前端界面。
 
